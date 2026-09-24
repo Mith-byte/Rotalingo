@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "home": "الرئيسية",
+    "leaderboard": "المتصدرون",
+    "profile": "الملف الشخصي",
+    "store": "المتجر"
+  },
+  "topbar": {
+    "streak": "السلسلة",
+    "hearts": "القلوب",
+    "gems": "الجواهر"
+  },
+  "home": {
+    "title": "تعلم التركية",
+    "subtitle": "اختر وحدة للبدء في التعلم",
+    "level": "المستوى",
+    "continue": "متابعة",
+    "start": "ابدأ"
+  },
+  "lesson": {
+    "check": "تحقق من الإجابة",
+    "continue": "متابعة",
+    "correct": "صحيح! 🎉",
+    "incorrect": "غير صحيح",
+    "complete_title": "اكتملت الدرس!",
+    "complete_xp": "نقاط الخبرة المكتسبة",
+    "complete_coins": "العملات المكتسبة",
+    "complete_button": "العودة للرئيسية",
+    "hearts_left": "القلوب المتبقية",
+    "no_hearts": "لا قلوب متبقية! عد لاحقًا.",
+    "progress": "التقدم"
+  },
+  "rpg": {
+    "choose": "اختر ردك:",
+    "scene_complete": "اكتمل المشهد! 🎭"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "signup": "إنشاء حساب",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "display_name": "الاسم المعروض",
+    "native_language": "لغتك الأم",
+    "have_account": "لديك حساب بالفعل؟",
+    "no_account": "ليس لديك حساب؟",
+    "or": "أو"
+  },
+  "languages": {
+    "en": "الإنجليزية",
+    "ar": "العربية",
+    "fa": "الفارسية",
+    "ru": "الروسية"
+  },
+  "units": {
+    "Market": "السوق",
+    "School": "المدرسة",
+    "Devlet Dairesi": "مكتب الحكومة",
+    "Travel": "السفر"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "home": "Home",
+    "leaderboard": "Leaderboard",
+    "profile": "Profile",
+    "store": "Store"
+  },
+  "topbar": {
+    "streak": "Streak",
+    "hearts": "Hearts",
+    "gems": "Gems"
+  },
+  "home": {
+    "title": "Learn Turkish",
+    "subtitle": "Choose a unit to start learning",
+    "level": "Level",
+    "continue": "Continue",
+    "start": "Start"
+  },
+  "lesson": {
+    "check": "Check Answer",
+    "continue": "Continue",
+    "correct": "Correct! 🎉",
+    "incorrect": "Incorrect",
+    "complete_title": "Lesson Complete!",
+    "complete_xp": "XP Earned",
+    "complete_coins": "Coins Earned",
+    "complete_button": "Back to Home",
+    "hearts_left": "Hearts left",
+    "no_hearts": "No hearts left! Come back later.",
+    "progress": "Progress"
+  },
+  "rpg": {
+    "choose": "Choose your response:",
+    "scene_complete": "Scene Complete! 🎭"
+  },
+  "auth": {
+    "login": "Log In",
+    "signup": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "display_name": "Display Name",
+    "native_language": "Your Native Language",
+    "have_account": "Already have an account?",
+    "no_account": "Don't have an account?",
+    "or": "or"
+  },
+  "languages": {
+    "en": "English",
+    "ar": "Arabic",
+    "fa": "Persian (Farsi)",
+    "ru": "Russian"
+  },
+  "units": {
+    "Market": "Market",
+    "School": "School",
+    "Devlet Dairesi": "Government Office",
+    "Travel": "Travel"
+  }
+}

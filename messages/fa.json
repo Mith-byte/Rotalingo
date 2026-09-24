@@ -1,0 +1,60 @@
+{
+  "nav": {
+    "home": "خانه",
+    "leaderboard": "رتبه‌بندی",
+    "profile": "پروفایل",
+    "store": "فروشگاه"
+  },
+  "topbar": {
+    "streak": "رشته",
+    "hearts": "قلب‌ها",
+    "gems": "جواهرات"
+  },
+  "home": {
+    "title": "ترکی یاد بگیر",
+    "subtitle": "یک واحد را برای شروع یادگیری انتخاب کنید",
+    "level": "سطح",
+    "continue": "ادامه",
+    "start": "شروع"
+  },
+  "lesson": {
+    "check": "بررسی پاسخ",
+    "continue": "ادامه",
+    "correct": "درست! 🎉",
+    "incorrect": "نادرست",
+    "complete_title": "درس کامل شد!",
+    "complete_xp": "XP کسب شده",
+    "complete_coins": "سکه‌های کسب شده",
+    "complete_button": "بازگشت به خانه",
+    "hearts_left": "قلب‌های باقی‌مانده",
+    "no_hearts": "قلبی باقی نمانده! بعداً برگردید.",
+    "progress": "پیشرفت"
+  },
+  "rpg": {
+    "choose": "پاسخ خود را انتخاب کنید:",
+    "scene_complete": "صحنه کامل شد! 🎭"
+  },
+  "auth": {
+    "login": "ورود",
+    "signup": "ثبت‌نام",
+    "email": "ایمیل",
+    "password": "رمز عبور",
+    "display_name": "نام نمایشی",
+    "native_language": "زبان مادری شما",
+    "have_account": "قبلاً حساب دارید؟",
+    "no_account": "حساب ندارید؟",
+    "or": "یا"
+  },
+  "languages": {
+    "en": "انگلیسی",
+    "ar": "عربی",
+    "fa": "فارسی",
+    "ru": "روسی"
+  },
+  "units": {
+    "Market": "بازار",
+    "School": "مدرسه",
+    "Devlet Dairesi": "اداره دولتی",
+    "Travel": "سفر"
+  }
+}
