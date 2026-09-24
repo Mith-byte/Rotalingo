@@ -112,7 +112,12 @@ export default function LessonView({ lesson, locale }: LessonViewProps) {
 
   // ── Lesson complete screen ────────────────────────────────────
   if (isComplete) {
-    const lessonTitle = tlocale(lesson.title, locale);
+    const titleObj = lesson.title ?? lesson.name;
+    const lessonTitle = typeof titleObj === 'string' 
+      ? titleObj 
+      : titleObj 
+        ? tlocale(titleObj as unknown as Record<string, string>, locale) 
+        : '';
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
@@ -187,7 +192,7 @@ export default function LessonView({ lesson, locale }: LessonViewProps) {
       case 'drag_drop': {
         const ddEx = ex as DragDropExercise;
         const displayPairs = ddEx.pairs.map((p) => ({
-          id: p.id,
+          id: p.id ?? crypto.randomUUID(),
           turkish: getPairTurkish(p),
           translation: getPairTranslation(p, locale),
           emoji: p.emoji,

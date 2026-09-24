@@ -227,6 +227,7 @@ export interface Lesson {
 export interface Unit {
   id: string;
   unitNumber?: number;
+  order?: number;         // Subagent alias
   name?: TText | string;
   title?: TText | string;          // Subagent alias
   description?: TText | string;    // Subagent alias
@@ -242,6 +243,7 @@ export type LevelCode = 'A1' | 'A1 İleri' | 'A2' | 'A2 İleri';
 export interface Level {
   id: string;
   number?: number;        // Subagent alias
+  order?: number;         // Subagent alias
   code?: LevelCode;
   level?: string;         // Subagent alias
   name?: TText | string;
@@ -403,7 +405,7 @@ export function getRPGScenario(ex: RPGExercise | RPGTypingExercise, locale: stri
 }
 
 /** Get RPG start node ID */
-export function getRPGStartNodeId(ex: RPGExercise): string {
+export function getRPGStartNodeId(ex: RPGExercise | RPGTypingExercise): string {
   return ex.startNodeId ?? (ex as { startNode?: string }).startNode ?? ex.nodes[0]?.nodeId ?? ex.nodes[0]?.id ?? 'node_1';
 }
 

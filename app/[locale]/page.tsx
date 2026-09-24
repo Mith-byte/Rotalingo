@@ -92,15 +92,28 @@ export default function HomePage() {
                   isLessonUnlocked(l.id, unit, completedLessons)
                 );
 
+                // Handle alias and type combinations safely
+                const unitName = unit.name ?? unit.title;
+                const localizedName = typeof unitName === 'string' 
+                  ? unitName 
+                  : unitName 
+                    ? tlocale(unitName as unknown as Record<string, string>, locale) 
+                    : "";
+                const turkishName = typeof unitName === 'string' 
+                  ? unitName 
+                  : unitName 
+                    ? (unitName as any).tr ?? "" 
+                    : "";
+
                 return (
                   <motion.div key={unit.id} variants={itemVariants}>
                     <UnitCard
                       id={firstUnlockedLesson?.id ?? unit.lessons[0].id}
-                      name={tlocale(unit.name as unknown as Record<string, string>, locale)}
-                      nameTr={unit.name.tr}
+                      name={localizedName}
+                      nameTr={turkishName}
                       emoji={unit.emoji}
-                      level={level.code}
-                      color={unit.color}
+                      level={level.code ?? level.id}
+                      color={unit.color ?? unit.themeColor ?? 'from-slate-400 to-slate-500'}
                       lessonCount={unit.lessons.length}
                       completedCount={completedCount}
                       isLocked={!unitUnlocked}
