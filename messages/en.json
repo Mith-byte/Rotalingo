@@ -15,7 +15,8 @@
     "subtitle": "Choose a unit to start learning",
     "level": "Level",
     "continue": "Continue",
-    "start": "Start"
+    "start": "Start",
+    "guidebook": "Guidebook"
   },
   "lesson": {
     "check": "Check Answer",

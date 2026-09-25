@@ -10,6 +10,7 @@ interface GuidebookModalProps {
   isOpen: boolean;
   onClose: () => void;
   locale: string;
+  unitName?: string;  // Fallback when guidebook.title is missing
 }
 
 function getLoc(ttext: TText, locale: string): string {
@@ -17,7 +18,7 @@ function getLoc(ttext: TText, locale: string): string {
   return ttext[locale] ?? ttext['en'];
 }
 
-export default function GuidebookModal({ guidebook, isOpen, onClose, locale }: GuidebookModalProps) {
+export default function GuidebookModal({ guidebook, isOpen, onClose, locale, unitName = '' }: GuidebookModalProps) {
   const t = useTranslations('home'); // or create a specific 'guidebook' translation namespace
 
   if (!guidebook) return null;
@@ -51,7 +52,7 @@ export default function GuidebookModal({ guidebook, isOpen, onClose, locale }: G
                 </div>
                 <div>
                   <h2 className="font-bold text-lg leading-tight">
-                    {getLoc(guidebook.title, locale)}
+                    {guidebook.title ? getLoc(guidebook.title, locale) : unitName}
                   </h2>
                   <p className="text-red-100 text-xs font-medium uppercase tracking-wider">
                     Guidebook
@@ -68,9 +69,11 @@ export default function GuidebookModal({ guidebook, isOpen, onClose, locale }: G
 
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto px-6 py-6 pb-32">
-              <p className="text-slate-600 mb-8 leading-relaxed">
-                {getLoc(guidebook.description, locale)}
-              </p>
+              {guidebook.description && (
+                <p className="text-slate-600 mb-8 leading-relaxed">
+                  {getLoc(guidebook.description, locale)}
+                </p>
+              )}
 
               {/* 1. Key Phrases */}
               {guidebook.keyPhrases && guidebook.keyPhrases.length > 0 && (

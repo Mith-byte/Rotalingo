@@ -82,21 +82,26 @@ export default function RPGTypingCard({
     if (!inputValue.trim() || submitted) return;
 
     const lower = inputValue.toLowerCase();
-    const matched = currentNode.matches.find((m) =>
-      m.keywords.some((kw) => lower.includes(kw.toLowerCase()))
-    );
+    const matched = currentNode.matches.find((m) => {
+      // Support both `keywords[]` (canonical) and `target` string (subagent alias)
+      const kws = m.keywords ?? (m.target ? [m.target] : []);
+      return kws.some((kw) => lower.includes(kw.toLowerCase()));
+    });
 
     if (matched) {
-      const responseText = tlocale(matched.npcResponse as unknown as Record<string, string>, locale);
-      setNpcResponse({ text: responseText, tone: matched.responseTone });
+      const npcResp = matched.npcResponse ?? matched.hint;
+      const responseText = npcResp ? tlocale(npcResp as unknown as Record<string, string>, locale) : '';
+      const tone = matched.responseTone ?? (matched.deductsHeart ? 'negative' : 'success');
+      setNpcResponse({ text: responseText, tone });
       setNextId(matched.nextNodeId ?? null);
-      if (matched.responseTone === 'negative') {
+      if (tone === 'negative') {
         onWrongAnswer();
       }
     } else {
-      const fallbackText = tlocale(currentNode.fallbackResponse as unknown as Record<string, string>, locale);
+      const fallback = currentNode.fallbackResponse;
+      const fallbackText = fallback ? tlocale(fallback as unknown as Record<string, string>, locale) : '';
       setNpcResponse({ text: fallbackText, tone: 'negative' });
-      setNextId(null);
+      setNextId(typeof currentNode.fallbackNextNodeId !== 'undefined' ? (currentNode.fallbackNextNodeId ?? null) : null);
       onWrongAnswer();
     }
     setSubmitted(true);

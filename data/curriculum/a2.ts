@@ -1,1408 +1,496 @@
-import type { Level, Unit, Lesson, MCExercise, DragDropExercise, WordOrderExercise, FIBExercise, RPGExercise, TText } from '../types';
+import type { Level, Unit, Lesson, MCExercise, DragDropExercise, WordOrderExercise, FIBExercise, RPGExercise, TText, UnitGuidebook, RPGNode } from '../types';
+
+const t = (tr: string, en: string, ar: string, fa: string, ru: string): TText => ({ tr, en, ar, fa, ru });
+
+const makeMC = (id: string, promptTxt: TText, correctTxt: TText, w1Txt: TText, w2Txt: TText): MCExercise => ({
+  id, type: 'multiple_choice',
+  prompt: t("Bu kelimenin anlamı nedir?", "What does this word mean?", "ماذا تعني هذه الكلمة؟", "این کلمه به چه معناست؟", "Что означает это слово?"),
+  options: [
+    { id: id+'_c', text: correctTxt, isCorrect: true },
+    { id: id+'_w1', text: w1Txt, isCorrect: false },
+    { id: id+'_w2', text: w2Txt, isCorrect: false }
+  ].sort(() => Math.random() - 0.5)
+});
+
+const makeDD = (id: string, words: TText[]): DragDropExercise => ({
+  id, type: 'drag_drop',
+  prompt: t("Eşleştirin", "Match the words", "طابق الكلمات", "کلمات را مطابقت دهید", "Сопоставьте слова"),
+  pairs: words.map((w, i) => ({ id: `${id}_p${i}`, source: w.tr, target: w }))
+});
+
+const makeWO = (id: string, sentenceTr: string, translation: TText): WordOrderExercise => {
+  const words = sentenceTr.split(' ');
+  return {
+    id, type: 'word_order',
+    prompt: t("Cümleyi kurun", "Form the sentence", "رتب الجملة", "جمله را بسازید", "Составьте предложение"),
+    correctOrder: words,
+    scrambledWords: [...words].sort(() => Math.random() - 0.5),
+    translation
+  };
+};
+
+const makeFIB = (id: string, template: string, answer: string, options: string[], translation: TText): FIBExercise => ({
+  id, type: 'fill_in_the_blank',
+  prompt: t("Boşluğu doldurun", "Fill in the blank", "املاء الفراغ", "جای خالی را پر کنید", "Заполните пропуск"),
+  sentenceTemplate: template,
+  correctAnswers: [answer],
+  wordBank: [answer, ...options].sort(() => Math.random() - 0.5),
+  translation
+});
+
+const makeRPG = (id: string, scenario: TText, nodes: RPGNode[]): RPGExercise => ({
+  id, type: 'rpg_dialogue',
+  scenario,
+  nodes,
+  startNodeId: nodes[0].nodeId
+});
+
+const u1Vocab1 = [
+  t("randevu", "appointment", "موعد", "قرار", "встреча"),
+  t("belge", "document", "وثيقة", "سند", "документ"),
+  t("kimlik", "ID", "هوية", "هویت", "удостоверение"),
+  t("pasaport", "passport", "جواز سفر", "گذرنامه", "паспорт"),
+  t("başvuru", "application", "تطبيق", "درخواست", "заявление")
+];
+const u1Vocab2 = [
+  t("form", "form", "استمارة", "فرم", "форма"),
+  t("imza", "signature", "توقيع", "امضا", "подпись"),
+  t("mühür", "seal", "ختم", "مهر", "печать"),
+  t("kira kontratı", "lease contract", "عقد إيجار", "قرارداد اجاره", "договор аренды"),
+  t("ikamet izni", "residence permit", "تصريح إقامة", "اجازه اقامت", "вид на жительство")
+];
+const u1Vocab3 = [
+  t("vergi numarası", "tax number", "رقم ضريبي", "شماره مالیاتی", "налоговый номер"),
+  t("noter", "notary", "كاتب عدل", "دفتر اسناد رسمی", "нотариус"),
+  t("tercüman", "translator", "مترجم", "مترجم", "переводчик"),
+  t("belediye", "municipality", "بلدية", "شهرداری", "муниципалитет"),
+  t("muhtarlık", "mukhtar's office", "مكتب المختار", "دفتر مختار", "кабинет старосты")
+];
+const u1RPG1: RPGNode[] = [
+  {
+    nodeId: "start", npcName: "Memur", npcEmoji: "👨‍💼",
+    npcText: t("Hoş geldiniz. İkamet izni için mi geldiniz?", "Welcome. Are you here for the residence permit?", "أهلا بك. هل أنت هنا للحصول على تصريح الإقامة؟", "خوش آمدید. برای اجازه اقامت آمدید؟", "Добро пожаловать. Вы здесь за видом на жительство?"),
+    options: [
+      { isCorrect: true, text: t("Evet, randevu almak istiyorum.", "Yes, I want to get an appointment.", "نعم، أريد تحديد موعد.", "بله، می‌خواهم وقت بگیرم.", "Да, я хочу записаться на прием."), nextNodeId: "docs" },
+      { isCorrect: false, text: t("Hayır, sadece belge.", "No, just document.", "لا، فقط وثيقة.", "نه، فقط سند.", "Нет, только документ.") }
+    ]
+  },
+  {
+    nodeId: "docs", npcName: "Memur", npcEmoji: "👨‍💼",
+    npcText: t("Randevunuzu oluşturdum. Belgeleriniz hazır mı?", "I created your appointment. Are your documents ready?", "لقد حددت موعدك. هل مستنداتك جاهزة؟", "من وقت شما را ایجاد کردم. آیا مدارک شما آماده است؟", "Я создал вашу встречу. Ваши документы готовы?"),
+    options: [
+      { isCorrect: true, text: t("Hangi belgeler gerekli?", "Which documents are required?", "ما هي المستندات المطلوبة؟", "چه مدارکی لازم است؟", "Какие документы требуются?"), nextNodeId: "end" },
+      { isCorrect: false, text: t("Sadece pasaport.", "Only passport.", "جواز سفر فقط.", "فقط گذرنامه.", "Только паспорт.") }
+    ]
+  },
+  {
+    nodeId: "end", npcName: "Memur", npcEmoji: "👨‍💼", isFinal: true,
+    npcText: t("Pasaport, kira kontratı ve başvuru formu gerekli.", "Passport, lease contract, and application form are required.", "مطلوب جواز سفر وعقد إيجار واستمارة طلب.", "گذرنامه، قرارداد اجاره و فرم درخواست لازم است.", "Требуются паспорт, договор аренды и анкета."),
+    options: []
+  }
+];
+const u1RPG2: RPGNode[] = [
+  {
+    nodeId: "start", npcName: "Noter", npcEmoji: "⚖️",
+    npcText: t("Buyrun, hangi belgeyi onaylatacaksınız?", "Here you go, which document will you have approved?", "تفضل، أي مستند ستوافق عليه؟", "بفرمایید، کدام سند را تأیید می‌کنید؟", "Пожалуйста, какой документ вы хотите утвердить?"),
+    options: [
+      { isCorrect: true, text: t("Bu kira kontratına mühür ve imza gerekiyor.", "This lease contract needs a seal and signature.", "يحتاج عقد الإيجار هذا إلى ختم وتوقيع.", "این قرارداد اجاره نیاز به مهر و امضا دارد.", "Для этого договора аренды требуются печать и подпись."), nextNodeId: "wait" },
+      { isCorrect: false, text: t("Ben sadece imza istiyorum.", "I just want a signature.", "أريد فقط توقيع.", "من فقط یک امضا می خواهم.", "Я просто хочу подпись.") }
+    ]
+  },
+  {
+    nodeId: "wait", npcName: "Noter", npcEmoji: "⚖️", isFinal: true,
+    npcText: t("Lütfen formları doldurun ve bekleyin.", "Please fill out the forms and wait.", "يرجى ملء الاستمارات والانتظار.", "لطفا فرم ها را پر کنید و منتظر بمانید.", "Пожалуйста, заполните формы и подождите."),
+    options: []
+  }
+];
+
+const u2Vocab1 = [
+  t("hesap", "account", "حساب", "حساب", "счет"),
+  t("kart", "card", "بطاقة", "کارت", "карта"),
+  t("para", "money", "مال", "پول", "деньги"),
+  t("faiz", "interest", "فائدة", "بهره", "процент"),
+  t("döviz", "foreign exchange", "عملة أجنبية", "ارز", "валюта")
+];
+const u2Vocab2 = [
+  t("transfer", "transfer", "تحويل", "انتقال", "перевод"),
+  t("ödeme", "payment", "دفع", "پرداخت", "платеж"),
+  t("fatura", "bill", "فاتورة", "قبض", "счет (фактура)"),
+  t("bakiye", "balance", "رصيد", "موجودی", "баланс"),
+  t("limit", "limit", "حد", "حد", "лимит")
+];
+const u2Vocab3 = [
+  t("şifre", "password", "كلمة المرور", "رمز عبور", "пароль"),
+  t("banka şubesi", "bank branch", "فرع البنك", "شعبه بانک", "отделение банка"),
+  t("ATM", "ATM", "صراف آلي", "خودپرداز", "банкомат"),
+  t("kredi", "loan/credit", "قرض/ائتمان", "وام/اعتبار", "кредит"),
+  t("taksit", "installment", "قسط", "قسط", "рассрочка")
+];
+const u2RPG1: RPGNode[] = [
+  {
+    nodeId: "start", npcName: "Bankacı", npcEmoji: "👔",
+    npcText: t("Size nasıl yardımcı olabilirim?", "How can I help you?", "كيف يمكنني مساعدتك؟", "چگونه می توانم به شما کمک کنم؟", "Как я могу вам помочь?"),
+    options: [
+      { isCorrect: true, text: t("Hesap açmak istiyorum.", "I want to open an account.", "أريد فتح حساب.", "من می خواهم یک حساب باز کنم.", "Я хочу открыть счет."), nextNodeId: "docs" },
+      { isCorrect: false, text: t("Kart başvurusu.", "Card application.", "طلب بطاقة.", "درخواست کارت.", "Заявка на карту.") }
+    ]
+  },
+  {
+    nodeId: "docs", npcName: "Bankacı", npcEmoji: "👔",
+    npcText: t("Tabii, kimlik ve ikametgah belgesi gerekli. Ne kadar sürer?", "Sure, ID and proof of residence are required. How long does it take?", "بالتأكيد، مطلوب الهوية وإثبات الإقامة. كم يستغرق من الوقت؟", "مطمئنا، کارت شناسایی و مدرک اقامت مورد نیاز است. چقدر طول می کشد؟", "Конечно, требуются удостоверение личности и подтверждение проживания. Сколько времени это займет?"),
+    options: [
+      { isCorrect: true, text: t("İşlem ne kadar sürer?", "How long does the process take?", "كم تستغرق العملية؟", "روند چقدر طول می کشد؟", "Сколько времени займет процесс?"), nextNodeId: "end" },
+      { isCorrect: false, text: t("Bakiyem nedir?", "What is my balance?", "ما هو رصيدي؟", "موجودی من چقدر است؟", "Какой у меня баланс?") }
+    ]
+  },
+  {
+    nodeId: "end", npcName: "Bankacı", npcEmoji: "👔", isFinal: true,
+    npcText: t("Sadece on dakika.", "Only ten minutes.", "عشر دقائق فقط.", "فقط ده دقیقه.", "Всего десять минут."),
+    options: []
+  }
+];
+const u2RPG2: RPGNode[] = [
+  {
+    nodeId: "start", npcName: "Gişe Görevlisi", npcEmoji: "👩‍💼",
+    npcText: t("Bakiyenizde bir eksilme mi var?", "Is there a decrease in your balance?", "هل هناك انخفاض في رصيدك؟", "آیا کاهش در موجودی شما وجود دارد؟", "Ваш баланс уменьшился?"),
+    options: [
+      { isCorrect: true, text: t("Evet, bu ödemeyi ben yapmadım.", "Yes, I didn't make this payment.", "نعم، لم أقم بهذا الدفع.", "بله، من این پرداخت را انجام ندادم.", "Да, я не делал этот платеж."), nextNodeId: "check" },
+      { isCorrect: false, text: t("Para transferi yapmak istiyorum.", "I want to make a money transfer.", "أريد إجراء تحويل أموال.", "من می خواهم پول انتقال دهم.", "Я хочу сделать денежный перевод.") }
+    ]
+  },
+  {
+    nodeId: "check", npcName: "Gişe Görevlisi", npcEmoji: "👩‍💼", isFinal: true,
+    npcText: t("Hemen kontrol ediyorum, kartınızı iptal edelim.", "I am checking it right away, let's cancel your card.", "أنا أتحقق من ذلك على الفور، دعنا نلغي بطاقتك.", "من فوراً آن را بررسی می کنم، بیایید کارت شما را لغو کنیم.", "Я сейчас проверю, давайте аннулируем вашу карту."),
+    options: []
+  }
+];
+
+const u3Vocab1 = [
+  t("poliklinik", "polyclinic", "عيادة شاملة", "پلی کلینیک", "поликлиника"),
+  t("acil", "emergency", "طوارئ", "اورژانس", "скорая помощь"),
+  t("reçete", "prescription", "وصفة طبية", "نسخه", "рецепт"),
+  t("tahlil", "test/analysis", "تحليل", "آزمایش", "анализ"),
+  t("röntgen", "x-ray", "أشعة سينية", "اشعه ایکس", "рентген")
+];
+const u3Vocab2 = [
+  t("ameliyat", "surgery", "جراحة", "عمل جراحی", "операция"),
+  t("sigorta", "insurance", "تأمين", "بیمه", "страховка"),
+  t("SGK", "social security", "الضمان الاجتماعي", "تامین اجتماعی", "социальное обеспечение"),
+  t("muayene", "examination", "فحص", "معاینه", "осмотр"),
+  t("doktor", "doctor", "طبيب", "دکتر", "врач")
+];
+const u3Vocab3 = [
+  t("hemşire", "nurse", "ممرضة", "پرستار", "медсестра"),
+  t("eczane", "pharmacy", "صيدلية", "داروخانه", "аптека"),
+  t("ilaç", "medicine", "دواء", "دارو", "лекарство"),
+  t("randevu", "appointment", "موعد", "نوبت", "прием"),
+  t("tedavi", "treatment", "علاج", "درمان", "лечение")
+];
+const u3RPG1: RPGNode[] = [
+  {
+    nodeId: "start", npcName: "Doktor", npcEmoji: "🩺",
+    npcText: t("Neyiniz var? Acil bir durum mu?", "What's wrong? Is it an emergency?", "ما بك؟ هل هي حالة طوارئ؟", "مشکل چیست؟ آیا اورژانس است؟", "Что с вами? Это срочно?"),
+    options: [
+      { isCorrect: true, text: t("Göğsüm ağrıyor, acil servis nerede?", "My chest hurts, where is the emergency room?", "صدري يؤلمني، أين غرفة الطوارئ؟", "قفسه سینه ام درد می کند، اورژانس کجاست؟", "У меня болит грудь, где отделение скорой помощи?"), nextNodeId: "help" },
+      { isCorrect: false, text: t("Sadece reçete.", "Just prescription.", "وصفة طبية فقط.", "فقط نسخه.", "Только рецепт.") }
+    ]
+  },
+  {
+    nodeId: "help", npcName: "Doktor", npcEmoji: "🩺", isFinal: true,
+    npcText: t("Hemen müdahale edelim.", "Let's intervene immediately.", "دعونا نتدخل على الفور.", "اجازه دهید فوراً مداخله کنیم.", "Давайте немедленно вмешаемся."),
+    options: []
+  }
+];
+const u3RPG2: RPGNode[] = [
+  {
+    nodeId: "start", npcName: "Doktor", npcEmoji: "🩺",
+    npcText: t("Tahlil sonuçlarınız iyi. Reçetenizi yazdım.", "Your test results are good. I wrote your prescription.", "نتائج تحاليلك جيدة. لقد كتبت وصفتك الطبية.", "نتایج آزمایش شما خوب است. نسخه شما را نوشتم.", "Ваши результаты анализов хорошие. Я выписал вам рецепт."),
+    options: [
+      { isCorrect: true, text: t("Bu ilacı nasıl kullanırım?", "How do I use this medicine?", "كيف أستخدم هذا الدواء؟", "چگونه از این دارو استفاده کنم؟", "Как мне принимать это лекарство?"), nextNodeId: "ins" },
+      { isCorrect: false, text: t("Tahlil sonuçlarım nerede?", "Where are my test results?", "أين نتائج تحاليلي؟", "نتایج آزمایش من کجاست؟", "Где мои результаты анализов?") }
+    ]
+  },
+  {
+    nodeId: "ins", npcName: "Doktor", npcEmoji: "🩺", isFinal: true,
+    npcText: t("Günde iki tok karnına için.", "Take it twice a day on a full stomach.", "خذه مرتين في اليوم على معدة ممتلئة.", "آن را دو بار در روز با معده پر مصرف کنید.", "Принимайте два раза в день на полный желудок."),
+    options: []
+  }
+];
+
+const u4Vocab1 = [
+  t("posta", "mail", "بريد", "پست", "почта"),
+  t("kargo", "cargo/shipping", "شحن", "بار", "доставка"),
+  t("paket", "package", "طرد", "بسته", "посылка"),
+  t("fatura", "bill", "فاتورة", "قبض", "счет"),
+  t("ödeme", "payment", "دفع", "پرداخت", "платеж")
+];
+const u4Vocab2 = [
+  t("abone", "subscriber", "مشترك", "مشترک", "абонент"),
+  t("abonelik", "subscription", "اشتراك", "اشتراک", "подписка"),
+  t("elektrik", "electricity", "كهرباء", "برق", "электричество"),
+  t("su", "water", "ماء", "آب", "вода"),
+  t("doğalgaz", "natural gas", "غاز طبيعي", "گاز طبیعی", "природный газ")
+];
+const u4Vocab3 = [
+  t("internet", "internet", "إنترنت", "اینترنت", "интернет"),
+  t("telefon", "phone", "هاتف", "تلفن", "телефон"),
+  t("kurye", "courier", "ساعي", "پیک", "курьер"),
+  t("takip numarası", "tracking number", "رقم التتبع", "شماره پیگیری", "номер отслеживания"),
+  t("teslimat", "delivery", "توصيل", "تحویل", "доставка")
+];
+const u4RPG1: RPGNode[] = [
+  {
+    nodeId: "start", npcName: "Postacı", npcEmoji: "🏣",
+    npcText: t("Paketinizi nereye göndereceksiniz?", "Where will you send your package?", "إلى أين سترسل طردك؟", "بسته خود را به کجا می فرستید؟", "Куда вы отправите свою посылку?"),
+    options: [
+      { isCorrect: true, text: t("Bu paketi İzmir'e göndermek istiyorum.", "I want to send this package to Izmir.", "أريد إرسال هذا الطرد إلى إزمير.", "من می خواهم این بسته را به ازمیر بفرستم.", "Я хочу отправить эту посылку в Измир."), nextNodeId: "track" },
+      { isCorrect: false, text: t("Adresim değişti.", "My address changed.", "تغير عنواني.", "آدرس من تغییر کرد.", "Мой адрес изменился.") }
+    ]
+  },
+  {
+    nodeId: "track", npcName: "Postacı", npcEmoji: "🏣",
+    npcText: t("İşleminiz tamam. Başka bir isteğiniz var mı?", "Your transaction is complete. Do you have any other requests?", "اكتملت معاملتك. هل لديك أي طلبات أخرى؟", "معامله شما انجام شد. آیا درخواست دیگری دارید؟", "Ваша транзакция завершена. У вас есть другие просьбы?"),
+    options: [
+      { isCorrect: true, text: t("Takip numarasını alabilir miyim?", "Can I get the tracking number?", "هل يمكنني الحصول على رقم التتبع؟", "آیا می توانم شماره پیگیری را بگیرم؟", "Могу я получить номер отслеживания?"), nextNodeId: "end" },
+      { isCorrect: false, text: t("Paket nerede?", "Where is the package?", "أين الطرد؟", "بسته کجاست؟", "Где посылка?") }
+    ]
+  },
+  {
+    nodeId: "end", npcName: "Postacı", npcEmoji: "🏣", isFinal: true,
+    npcText: t("Tabii, işte makbuzunuz. Ne zaman teslim edileceği yazıyor.", "Sure, here is your receipt. It says when it will be delivered.", "بالتأكيد، ها هو الإيصال الخاص بك. يقول متى سيتم تسليمه.", "مطمئنا، اینجا رسید شماست. می گوید کی تحویل داده می شود.", "Конечно, вот ваша квитанция. Там написано, когда будет доставлено."),
+    options: []
+  }
+];
+const u4RPG2: RPGNode[] = [
+  {
+    nodeId: "start", npcName: "Görevli", npcEmoji: "👨‍💼",
+    npcText: t("PTT'ye hoş geldiniz, fatura ödemesi mi?", "Welcome to PTT, bill payment?", "مرحبا بك في PTT، دفع الفواتير؟", "به PTT خوش آمدید، پرداخت قبض؟", "Добро пожаловать в PTT, оплата счетов?"),
+    options: [
+      { isCorrect: true, text: t("Evet, faturamı ödemek istiyorum.", "Yes, I want to pay my bill.", "نعم، أريد دفع فاتورتي.", "بله، من می خواهم قبض خود را پرداخت کنم.", "Да, я хочу оплатить счет."), nextNodeId: "end" },
+      { isCorrect: false, text: t("Kargo takip.", "Cargo tracking.", "تتبع الشحن.", "پیگیری بار.", "Отслеживание груза.") }
+    ]
+  },
+  {
+    nodeId: "end", npcName: "Görevli", npcEmoji: "👨‍💼", isFinal: true,
+    npcText: t("Nakit mi kredi kartı mı?", "Cash or credit card?", "نقدا أم بطاقة ائتمان؟", "نقد یا کارت اعتباری؟", "Наличными или кредитной картой?"),
+    options: []
+  }
+];
+
+const u5Vocab1 = [
+  t("kiracı", "tenant", "مستأجر", "مستاجر", "арендатор"),
+  t("ev sahibi", "landlord", "صاحب المنزل", "صاحبخانه", "домовладелец"),
+  t("kira", "rent", "إيجار", "اجاره", "аренда"),
+  t("depozito", "deposit", "عربون", "ودیعه", "залог"),
+  t("sözleşme", "contract", "عقد", "قرارداد", "договор")
+];
+const u5Vocab2 = [
+  t("aidat", "dues/fee", "رسوم", "شارژ", "взнос"),
+  t("daire", "apartment", "شقة", "آپارتمان", "квартира"),
+  t("kat", "floor", "طابق", "طبقه", "этаж"),
+  t("asansör", "elevator", "مصعد", "آسانسور", "лифт"),
+  t("bodrum", "basement", "قبو", "زیرزمین", "подвал")
+];
+const u5Vocab3 = [
+  t("çatı katı", "attic", "علية", "اتاق زیر شیروانی", "чердак"),
+  t("komşu", "neighbor", "جار", "همسایه", "сосед"),
+  t("kapıcı", "doorman/janitor", "بواب", "سرایدار", "швейцар"),
+  t("taşınmak", "to move", "للانتقال", "اسباب کشی", "переезжать"),
+  t("tadilat", "renovation", "تجديد", "نوسازی", "ремонт")
+];
+const u5RPG1: RPGNode[] = [
+  {
+    nodeId: "start", npcName: "Ev Sahibi", npcEmoji: "👴",
+    npcText: t("Daireyi beğendiniz mi?", "Did you like the apartment?", "هل أعجبتك الشقة؟", "آیا آپارتمان را دوست داشتید؟", "Вам понравилась квартира?"),
+    options: [
+      { isCorrect: true, text: t("Evet, daire kiralamak istiyorum. Kira ne kadar?", "Yes, I want to rent the apartment. How much is the rent?", "نعم، أريد استئجار الشقة. كم الإيجار؟", "بله، من می خواهم آپارتمان را اجاره کنم. اجاره چقدر است؟", "Да, я хочу снять квартиру. Сколько стоит аренда?"), nextNodeId: "dep" },
+      { isCorrect: false, text: t("Hayır, komşular kötü.", "No, neighbors are bad.", "لا، الجيران سيئون.", "نه، همسایه ها بد هستند.", "Нет, соседи плохие.") }
+    ]
+  },
+  {
+    nodeId: "dep", npcName: "Ev Sahibi", npcEmoji: "👴",
+    npcText: t("Kira aylık 15.000 TL.", "The rent is 15,000 TL per month.", "الإيجار 15000 ليرة تركية شهريا.", "اجاره 15000 لیر در ماه است.", "Аренда составляет 15 000 лир в месяц."),
+    options: [
+      { isCorrect: true, text: t("Depozito kaç ay? Sözleşmeyi imzalayacağız.", "How many months is the deposit? We will sign the contract.", "كم شهرا العربون؟ سنوقع العقد.", "ودیعه چند ماه است؟ ما قرارداد را امضا خواهیم کرد.", "За сколько месяцев залог? Мы подпишем договор."), nextNodeId: "end" },
+      { isCorrect: false, text: t("Taşınma tarihimiz ne olsun?", "What should our move date be?", "ماذا يجب أن يكون تاريخ انتقالنا؟", "تاریخ اسباب کشی ما چه باشد؟", "Какова должна быть дата нашего переезда?") }
+    ]
+  },
+  {
+    nodeId: "end", npcName: "Ev Sahibi", npcEmoji: "👴", isFinal: true,
+    npcText: t("İki ay depozito. Yarın sözleşmeyi imzalarız.", "Two months deposit. We will sign the contract tomorrow.", "عربون شهرين. سنوقع العقد غدا.", "دو ماه ودیعه. فردا قرارداد را امضا می کنیم.", "Залог за два месяца. Завтра мы подпишем договор."),
+    options: []
+  }
+];
+const u5RPG2: RPGNode[] = [
+  {
+    nodeId: "start", npcName: "Komşu", npcEmoji: "👨",
+    npcText: t("Merhaba, bir sorun mu var?", "Hello, is there a problem?", "مرحبا، هل هناك مشكلة؟", "سلام، مشکلی هست؟", "Здравствуйте, есть проблема?"),
+    options: [
+      { isCorrect: true, text: t("Biraz gürültü oluyor, sesi kısabilir misiniz?", "There is some noise, can you turn down the volume?", "هناك بعض الضوضاء، هل يمكنك خفض مستوى الصوت؟", "کمی سر و صدا است، می توانید صدا را کم کنید؟", "Немного шумно, не могли бы вы убавить звук?"), nextNodeId: "end" },
+      { isCorrect: false, text: t("Taşınmak istiyorum.", "I want to move.", "أريد الانتقال.", "من می خواهم اسباب کشی کنم.", "Я хочу переехать.") }
+    ]
+  },
+  {
+    nodeId: "end", npcName: "Komşu", npcEmoji: "👨", isFinal: true,
+    npcText: t("Kusura bakmayın, hemen kısıyorum.", "Sorry, I'll turn it down right away.", "آسف، سأخفضه على الفور.", "ببخشید، فوراً کم می کنم.", "Извините, я сейчас убавлю."),
+    options: []
+  }
+];
+
+// Reusable unit generator
+const generateUnit = (
+  id: string, slug: string, title: TText, emoji: string, color: string,
+  v1: TText[], v2: TText[], v3: TText[],
+  rpg1: RPGNode[], rpg2: RPGNode[],
+  phrases: TText[], guidebook: UnitGuidebook
+): Unit => {
+  const allVocab = [...v1, ...v2, ...v3];
+
+  const getW = (list: TText[], exclude?: TText): TText => {
+    let r = list[Math.floor(Math.random() * list.length)];
+    while(r === exclude) r = list[Math.floor(Math.random() * list.length)];
+    return r;
+  };
+
+  const getXPCoins = (lessonType: string, isBoss: boolean = false) => {
+    if(isBoss) return { xpReward: 60, coinReward: 30 };
+    if(lessonType === 'rpg') return { xpReward: 30, coinReward: 15 };
+    return { xpReward: 20, coinReward: 10 };
+  };
+
+  return {
+    id, emoji, color, guidebook,
+    title,
+    lessons: [
+      // 1. Vocabulary MC (5)
+      { id: `a2_${slug}_1_vocabulary`, lessonType: 'vocabulary', ...getXPCoins('voc'), exercises: v1.map((w, i) => makeMC(`a2_${slug}_1_mc_${i}`, w, w, getW(allVocab, w), getW(allVocab, w))) },
+      // 2. DragDrop matching (5)
+      { id: `a2_${slug}_2_practice`, lessonType: 'practice', ...getXPCoins('prac'), exercises: [makeDD(`a2_${slug}_2_dd_1`, v1)] },
+      // 3. Vocabulary MC 2 (5)
+      { id: `a2_${slug}_3_vocabulary`, lessonType: 'vocabulary', ...getXPCoins('voc'), exercises: v2.map((w, i) => makeMC(`a2_${slug}_3_mc_${i}`, w, w, getW(allVocab, w), getW(allVocab, w))) },
+      // 4. RPG 1
+      { id: `a2_${slug}_4_rpg`, lessonType: 'rpg', ...getXPCoins('rpg'), exercises: [makeRPG(`a2_${slug}_4_rpg_1`, t("Diyalog", "Dialogue", "حوار", "گفتگو", "Диалог"), rpg1)] },
+      // 5. Sentence Building (3 WO + 2 FIB)
+      { id: `a2_${slug}_5_sentence_building`, lessonType: 'sentence_building', ...getXPCoins('sb'), exercises: [
+          makeWO(`a2_${slug}_5_wo_1`, "Ben " + v1[0].tr + " almak istiyorum", phrases[0] || t("İstiyorum", "I want", "أريد", "می خواهم", "Я хочу")),
+          makeWO(`a2_${slug}_5_wo_2`, v2[0].tr + " nerede", phrases[1] || t("Nerede", "Where", "أين", "کجاست", "Где")),
+          makeWO(`a2_${slug}_5_wo_3`, "Bu " + v3[0].tr + " benim", phrases[2] || t("Benim", "Mine", "لي", "مال من", "Мое")),
+          makeFIB(`a2_${slug}_5_fib_1`, "Bu ____ benim.", v1[1].tr, [v2[1].tr, v3[1].tr], t("Bu benim.", "This is mine.", "هذا لي.", "این مال من است.", "Это мое.")),
+          makeFIB(`a2_${slug}_5_fib_2`, "Ben ____ arıyorum.", v2[2].tr, [v1[2].tr, v3[2].tr], t("Arıyorum.", "I am looking.", "أنا أبحث.", "من به دنبال هستم.", "Я ищу."))
+        ]
+      },
+      // 6. Vocabulary MC 3 (5)
+      { id: `a2_${slug}_6_vocabulary`, lessonType: 'vocabulary', ...getXPCoins('voc'), exercises: v3.map((w, i) => makeMC(`a2_${slug}_6_mc_${i}`, w, w, getW(allVocab, w), getW(allVocab, w))) },
+      // 7. DragDrop 2 (5)
+      { id: `a2_${slug}_7_practice`, lessonType: 'practice', ...getXPCoins('prac'), exercises: [makeDD(`a2_${slug}_7_dd_1`, v2)] },
+      // 8. RPG 2
+      { id: `a2_${slug}_8_rpg`, lessonType: 'rpg', ...getXPCoins('rpg'), exercises: [makeRPG(`a2_${slug}_8_rpg_1`, t("Diyalog", "Dialogue", "حوار", "گفتگو", "Диалог"), rpg2)] },
+      // 9. Boss Fight (4 MC + 2 WO + 2 FIB)
+      { id: `a2_${slug}_9_boss_fight`, lessonType: 'boss_fight', ...getXPCoins('boss', true), exercises: [
+          makeMC(`a2_${slug}_9_mc_1`, v1[0], v1[0], v2[0], v3[0]),
+          makeMC(`a2_${slug}_9_mc_2`, v2[1], v2[1], v1[1], v3[1]),
+          makeMC(`a2_${slug}_9_mc_3`, v3[2], v3[2], v1[2], v2[2]),
+          makeMC(`a2_${slug}_9_mc_4`, v1[3], v1[3], v2[3], v3[3]),
+          makeWO(`a2_${slug}_9_wo_1`, "O " + v1[4].tr + " burada", phrases[3] || t("Burada", "Here", "هنا", "اینجا", "Здесь")),
+          makeWO(`a2_${slug}_9_wo_2`, "Bana " + v2[4].tr + " lazım", phrases[4] || t("Lazım", "Need", "بحاجة", "نیاز", "Нужно")),
+          makeFIB(`a2_${slug}_9_fib_1`, "Bizim ____ var.", v3[3].tr, [v1[3].tr, v2[3].tr], t("Bizim var.", "We have.", "لدينا.", "ما داریم.", "У нас есть.")),
+          makeFIB(`a2_${slug}_9_fib_2`, "Siz ____ misiniz?", v3[4].tr, [v1[4].tr, v2[4].tr], t("Siz misiniz?", "Are you?", "هل أنت؟", "آیا شما هستید؟", "Вы?"))
+        ]
+      }
+    ]
+  };
+};
 
 export const a2Level: Level = {
-  id: 'a2',
-  code: 'A2',
-  name: { tr: "A2 (Temel)", en: "A2 (Elementary)", ar: "A2 (\u0627\u0628\u062a\u062f\u0627\u0626\u064a)", fa: "A2 (\u0627\u0628\u062a\u062f\u0627\u06cc\u06cc)", ru: "A2 (\u042d\u043b\u0435\u043c\u0435\u043d\u0442\u0430\u0440\u043d\u044b\u0439)" },
-  units: [{ id: 'a2_devlet', unitNumber: 1, name: { tr: "Devlet Dairesi", en: "Government Office", ar: "\u062f\u0627\u0626\u0631\u0629 \u062d\u0643\u0648\u0645\u064a\u0629", fa: "\u0627\u062f\u0627\u0631\u0647 \u062f\u0648\u0644\u062a\u06cc", ru: "\u0413\u043e\u0441\u0443\u0434\u0430\u0440\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u0435 \u0443\u0447\u0440\u0435\u0436\u0434\u0435\u043d\u0438\u0435" }, emoji: '🏛️', color: 'from-slate-400 to-slate-600', lessons: [{ id: 'a2_devlet_1', lessonNumber: 1, lessonType: 'vocabulary', title: { tr: "Kelime: B\u00f6l\u00fcm 1", en: "Vocab 1", ar: "\u0645\u0641\u0631\u062f\u0627\u062a 1", fa: "\u0648\u0627\u0698\u06af\u0627\u0646 1", ru: "\u0421\u043b\u043e\u0432\u0430\u0440\u044c 1" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_devlet_1_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "evrak", translation: { tr: "evrak", en: "document", ar: "\u0648\u062b\u064a\u0642\u0629", fa: "\u0633\u0646\u062f", ru: "\u0434\u043e\u043a\u0443\u043c\u0435\u043d\u0442" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_devlet_1_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "ba\u015fvuru", translation: { tr: "ba\u015fvuru", en: "application", ar: "\u0637\u0644\u0628", fa: "\u062f\u0631\u062e\u0648\u0627\u0633\u062a", ru: "\u0437\u0430\u044f\u0432\u043b\u0435\u043d\u0438\u0435" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_devlet_1_2',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "kimlik", translation: { tr: "kimlik", en: "ID", ar: "\u0647\u0648\u064a\u0629", fa: "\u0647\u0648\u06cc\u062a", ru: "\u0443\u0434\u043e\u0441\u0442\u043e\u0432\u0435\u0440\u0435\u043d\u0438\u0435" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_devlet_1_3',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "randevu", translation: { tr: "randevu", en: "appointment", ar: "\u0645\u0648\u0639\u062f", fa: "\u0642\u0631\u0627\u0631", ru: "\u043d\u0430\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0435" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_devlet_1_4',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "onay", translation: { tr: "onay", en: "approval", ar: "\u0645\u0648\u0627\u0641\u0642\u0629", fa: "\u062a\u0627\u06cc\u06cc\u062f", ru: "\u043e\u0434\u043e\u0431\u0440\u0435\u043d\u0438\u0435" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }] },{ id: 'a2_devlet_2', lessonNumber: 2, lessonType: 'practice', title: { tr: "Pratik 1", en: "Practice 1", ar: "\u062a\u062f\u0631\u064a\u0628 1", fa: "\u062a\u0645\u0631\u06cc\u0646 1", ru: "\u041f\u0440\u0430\u043a\u0442\u0438\u043a\u0430 1" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_devlet_2_1',
-      type: 'drag_drop',
-      prompt: { tr: "E\u015fle\u015ftirin", en: "Match", ar: "\u062a\u0637\u0627\u0628\u0642", fa: "\u062a\u0637\u0627\u0628\u0642", ru: "\u0421\u043e\u043f\u043e\u0441\u0442\u0430\u0432\u044c\u0442\u0435" },
-      pairs: [{ id: 'p1', turkish: "evrak", translation: { tr: "document", en: "document", ar: "\u0648\u062b\u064a\u0642\u0629", fa: "\u0633\u0646\u062f", ru: "\u0434\u043e\u043a\u0443\u043c\u0435\u043d\u0442" } }, { id: 'p2', turkish: "ba\u015fvuru", translation: { tr: "application", en: "application", ar: "\u0637\u0644\u0628", fa: "\u062f\u0631\u062e\u0648\u0627\u0633\u062a", ru: "\u0437\u0430\u044f\u0432\u043b\u0435\u043d\u0438\u0435" } }, { id: 'p3', turkish: "kimlik", translation: { tr: "ID", en: "ID", ar: "\u0647\u0648\u064a\u0629", fa: "\u0647\u0648\u06cc\u062a", ru: "\u0443\u0434\u043e\u0441\u0442\u043e\u0432\u0435\u0440\u0435\u043d\u0438\u0435" } }, { id: 'p4', turkish: "randevu", translation: { tr: "appointment", en: "appointment", ar: "\u0645\u0648\u0639\u062f", fa: "\u0642\u0631\u0627\u0631", ru: "\u043d\u0430\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0435" } }, { id: 'p5', turkish: "onay", translation: { tr: "approval", en: "approval", ar: "\u0645\u0648\u0627\u0641\u0642\u0629", fa: "\u062a\u0627\u06cc\u06cc\u062f", ru: "\u043e\u0434\u043e\u0431\u0440\u0435\u043d\u0438\u0435" } }]
-    }] },{ id: 'a2_devlet_3', lessonNumber: 3, lessonType: 'sentence_building', title: { tr: "C\u00fcmle Kurma 1", en: "Sentences 1", ar: "\u062c\u0645\u0644 1", fa: "\u062c\u0645\u0644\u0627\u062a 1", ru: "\u041f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u044f 1" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_devlet_3_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["istiyorum", "Ba\u015fvurmak"],
-      correctOrder: ["Ba\u015fvurmak", "istiyorum"],
-      translation: { tr: "Ba\u015fvurmak istiyorum.", en: "I want to apply.", ar: "\u0623\u0631\u064a\u062f \u0627\u0644\u062a\u0642\u062f\u064a\u0645.", fa: "\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645 \u062f\u0631\u062e\u0648\u0627\u0633\u062a \u062f\u0647\u0645.", ru: "\u042f \u0445\u043e\u0447\u0443 \u043f\u043e\u0434\u0430\u0442\u044c \u0437\u0430\u044f\u0432\u043b\u0435\u043d\u0438\u0435." }
-    }, {
-      id: 'a2_devlet_3_2',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["yan\u0131mda", "Kimli\u011fim"],
-      correctOrder: ["Kimli\u011fim", "yan\u0131mda"],
-      translation: { tr: "Kimli\u011fim yan\u0131mda.", en: "My ID is with me.", ar: "\u0647\u0648\u064a\u062a\u064a \u0645\u0639\u064a.", fa: "\u0647\u0648\u06cc\u062a \u0645\u0646 \u0628\u0627 \u0645\u0646 \u0627\u0633\u062a.", ru: "\u041c\u043e\u0435 \u0443\u0434\u043e\u0441\u0442\u043e\u0432\u0435\u0440\u0435\u043d\u0438\u0435 \u0441\u043e \u043c\u043d\u043e\u0439." }
-    }, {
-      id: 'a2_devlet_3_3',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["ald\u0131m", "Randevu"],
-      correctOrder: ["Randevu", "ald\u0131m"],
-      translation: { tr: "Randevu ald\u0131m.", en: "I made an appointment.", ar: "\u0644\u0642\u062f \u0623\u062e\u0630\u062a \u0645\u0648\u0639\u062f\u0627.", fa: "\u0642\u0631\u0627\u0631 \u06af\u0631\u0641\u062a\u0645.", ru: "\u042f \u0437\u0430\u043f\u0438\u0441\u0430\u043b\u0441\u044f \u043d\u0430 \u043f\u0440\u0438\u0435\u043c." }
-    }, {
-      id: 'a2_devlet_3_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Benim ad\u0131m ____.",
-      correctAnswers: ["Ali"],
-      wordBank: ["Ali", "Masa", "Kalem"],
-      translation: { tr: "Benim ad\u0131m Ali.", en: "My name is Ali.", ar: "\u0627\u0633\u0645\u064a \u0639\u0644\u064a.", fa: "\u0646\u0627\u0645 \u0645\u0646 \u0639\u0644\u06cc \u0627\u0633\u062a.", ru: "\u041c\u0435\u043d\u044f \u0437\u043e\u0432\u0443\u0442 \u0410\u043b\u0438." }
-    }, {
-      id: 'a2_devlet_3_5',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Buras\u0131 ____ dairesi.",
-      correctAnswers: ["Devlet"],
-      wordBank: ["Devlet", "Banka", "Ev"],
-      translation: { tr: "Buras\u0131 devlet dairesi.", en: "This is a government office.", ar: "\u0647\u0630\u0647 \u062f\u0627\u0626\u0631\u0629 \u062d\u0643\u0648\u0645\u064a\u0629.", fa: "\u0627\u06cc\u0646 \u0627\u062f\u0627\u0631\u0647 \u062f\u0648\u0644\u062a\u06cc \u0627\u0633\u062a.", ru: "\u042d\u0442\u043e \u0433\u043e\u0441\u0443\u0434\u0430\u0440\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u0435 \u0443\u0447\u0440\u0435\u0436\u0434\u0435\u043d\u0438\u0435." }
-    }] },{ id: 'a2_devlet_4', lessonNumber: 4, lessonType: 'rpg', title: { tr: "Diyalog 1", en: "Dialogue 1", ar: "\u062d\u0648\u0627\u0631 1", fa: "\u06af\u0641\u062a\u06af\u0648 1", ru: "\u0414\u0438\u0430\u043b\u043e\u0433 1" }, xpReward: 35, coinReward: 15, exercises: [{
-      id: 'a2_devlet_4_1',
-      type: 'rpg_dialogue',
-      scenario: { tr: "RPG Senaryosu", en: "RPG Scenario", ar: "\u0633\u064a\u0646\u0627\u0631\u064a\u0648 RPG", fa: "\u0633\u0646\u0627\u0631\u06cc\u0648 RPG", ru: "\u0421\u0446\u0435\u043d\u0430\u0440\u0438\u0439 RPG" },
-      scenarioEmoji: '🗣️',
-      startNodeId: 'n1',
-      nodes: [
-        {
-          nodeId: 'n1', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "Merhaba, size nas\u0131l yard\u0131mc\u0131 olabilirim?", en: "Hello, how can I help you?", ar: "\u0645\u0631\u062d\u0628\u0627\u060c \u0643\u064a\u0641 \u064a\u0645\u0643\u0646\u0646\u064a \u0645\u0633\u0627\u0639\u062f\u062a\u0643\u061f", fa: "\u0633\u0644\u0627\u0645\u060c \u0686\u0637\u0648\u0631 \u0645\u06cc\u200c\u062a\u0648\u0627\u0646\u0645 \u06a9\u0645\u06a9 \u06a9\u0646\u0645\u061f", ru: "\u0417\u0434\u0440\u0430\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435, \u0447\u0435\u043c \u043c\u043e\u0433\u0443 \u043f\u043e\u043c\u043e\u0447\u044c?" },
-          options: [
-            { id: 'o1', turkish: 'Evet, lütfen.', hint: { tr: "Yes, please.", en: "Yes, please.", ar: "\u0646\u0639\u0645 \u0645\u0646 \u0641\u0636\u0644\u0643.", fa: "\u0628\u0644\u0647 \u0644\u0637\u0641\u0627.", ru: "\u0414\u0430, \u043f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430." }, isCorrect: true, deductsHeart: false, responseTone: 'success', npcResponse: { tr: "Peki, i\u015fleminizi yap\u0131yorum.", en: "Okay, processing.", ar: "\u062d\u0633\u0646\u0627\u060c \u062c\u0627\u0631\u064a \u0627\u0644\u062a\u0646\u0641\u064a\u0630.", fa: "\u0628\u0627\u0634\u0647\u060c \u062f\u0631 \u062d\u0627\u0644 \u0627\u0646\u062c\u0627\u0645.", ru: "\u0425\u043e\u0440\u043e\u0448\u043e, \u0432\u044b\u043f\u043e\u043b\u043d\u044f\u044e." }, nextNodeId: 'end' }
-          ]
-        },
-        {
-          nodeId: 'end', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "\u0130yi g\u00fcnler.", en: "Have a good day.", ar: "\u064a\u0648\u0645 \u0633\u0639\u064a\u062f.", fa: "\u0631\u0648\u0632 \u0628\u062e\u06cc\u0631.", ru: "\u0425\u043e\u0440\u043e\u0448\u0435\u0433\u043e \u0434\u043d\u044f." },
-          options: [], isFinal: true
-        }
-      ]
-    }] },{ id: 'a2_devlet_5', lessonNumber: 5, lessonType: 'vocabulary', title: { tr: "Kelime: B\u00f6l\u00fcm 2", en: "Vocab 2", ar: "\u0645\u0641\u0631\u062f\u0627\u062a 2", fa: "\u0648\u0627\u0698\u06af\u0627\u0646 2", ru: "\u0421\u043b\u043e\u0432\u0430\u0440\u044c 2" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_devlet_5_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "ret", translation: { tr: "ret", en: "rejection", ar: "\u0631\u0641\u0636", fa: "\u0631\u062f", ru: "\u043e\u0442\u043a\u0430\u0437" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_devlet_5_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "dilek\u00e7e", translation: { tr: "dilek\u00e7e", en: "petition", ar: "\u0639\u0631\u064a\u0636\u0629", fa: "\u0639\u0631\u06cc\u0636\u0647", ru: "\u043f\u0435\u0442\u0438\u0446\u0438\u044f" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_devlet_5_2',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "noter", translation: { tr: "noter", en: "notary", ar: "\u0643\u0627\u062a\u0628 \u0639\u062f\u0644", fa: "\u062f\u0641\u062a\u0631 \u0627\u0633\u0646\u0627\u062f", ru: "\u043d\u043e\u0442\u0430\u0440\u0438\u0443\u0441" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_devlet_5_3',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "m\u00fch\u00fcr", translation: { tr: "m\u00fch\u00fcr", en: "stamp", ar: "\u062e\u062a\u0645", fa: "\u0645\u0647\u0631", ru: "\u043f\u0435\u0447\u0430\u0442\u044c" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_devlet_5_4',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "pasaport", translation: { tr: "pasaport", en: "passport", ar: "\u062c\u0648\u0627\u0632 \u0633\u0641\u0631", fa: "\u06af\u0630\u0631\u0646\u0627\u0645\u0647", ru: "\u043f\u0430\u0441\u043f\u043e\u0440\u0442" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }] },{ id: 'a2_devlet_6', lessonNumber: 6, lessonType: 'practice', title: { tr: "Pratik 2", en: "Practice 2", ar: "\u062a\u062f\u0631\u064a\u0628 2", fa: "\u062a\u0645\u0631\u06cc\u0646 2", ru: "\u041f\u0440\u0430\u043a\u0442\u0438\u043a\u0430 2" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_devlet_6_1',
-      type: 'drag_drop',
-      prompt: { tr: "E\u015fle\u015ftirin", en: "Match", ar: "\u062a\u0637\u0627\u0628\u0642", fa: "\u062a\u0637\u0627\u0628\u0642", ru: "\u0421\u043e\u043f\u043e\u0441\u0442\u0430\u0432\u044c\u0442\u0435" },
-      pairs: [{ id: 'p1', turkish: "ret", translation: { tr: "rejection", en: "rejection", ar: "\u0631\u0641\u0636", fa: "\u0631\u062f", ru: "\u043e\u0442\u043a\u0430\u0437" } }, { id: 'p2', turkish: "dilek\u00e7e", translation: { tr: "petition", en: "petition", ar: "\u0639\u0631\u064a\u0636\u0629", fa: "\u0639\u0631\u06cc\u0636\u0647", ru: "\u043f\u0435\u0442\u0438\u0446\u0438\u044f" } }, { id: 'p3', turkish: "noter", translation: { tr: "notary", en: "notary", ar: "\u0643\u0627\u062a\u0628 \u0639\u062f\u0644", fa: "\u062f\u0641\u062a\u0631 \u0627\u0633\u0646\u0627\u062f", ru: "\u043d\u043e\u0442\u0430\u0440\u0438\u0443\u0441" } }, { id: 'p4', turkish: "m\u00fch\u00fcr", translation: { tr: "stamp", en: "stamp", ar: "\u062e\u062a\u0645", fa: "\u0645\u0647\u0631", ru: "\u043f\u0435\u0447\u0430\u0442\u044c" } }, { id: 'p5', turkish: "pasaport", translation: { tr: "passport", en: "passport", ar: "\u062c\u0648\u0627\u0632 \u0633\u0641\u0631", fa: "\u06af\u0630\u0631\u0646\u0627\u0645\u0647", ru: "\u043f\u0430\u0441\u043f\u043e\u0440\u0442" } }]
-    }] },{ id: 'a2_devlet_7', lessonNumber: 7, lessonType: 'sentence_building', title: { tr: "C\u00fcmle Kurma 2", en: "Sentences 2", ar: "\u062c\u0645\u0644 2", fa: "\u062c\u0645\u0644\u0627\u062a 2", ru: "\u041f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u044f 2" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_devlet_7_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["istiyorum", "Ba\u015fvurmak"],
-      correctOrder: ["Ba\u015fvurmak", "istiyorum"],
-      translation: { tr: "Ba\u015fvurmak istiyorum.", en: "I want to apply.", ar: "\u0623\u0631\u064a\u062f \u0627\u0644\u062a\u0642\u062f\u064a\u0645.", fa: "\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645 \u062f\u0631\u062e\u0648\u0627\u0633\u062a \u062f\u0647\u0645.", ru: "\u042f \u0445\u043e\u0447\u0443 \u043f\u043e\u0434\u0430\u0442\u044c \u0437\u0430\u044f\u0432\u043b\u0435\u043d\u0438\u0435." }
-    }, {
-      id: 'a2_devlet_7_2',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["yan\u0131mda", "Kimli\u011fim"],
-      correctOrder: ["Kimli\u011fim", "yan\u0131mda"],
-      translation: { tr: "Kimli\u011fim yan\u0131mda.", en: "My ID is with me.", ar: "\u0647\u0648\u064a\u062a\u064a \u0645\u0639\u064a.", fa: "\u0647\u0648\u06cc\u062a \u0645\u0646 \u0628\u0627 \u0645\u0646 \u0627\u0633\u062a.", ru: "\u041c\u043e\u0435 \u0443\u0434\u043e\u0441\u0442\u043e\u0432\u0435\u0440\u0435\u043d\u0438\u0435 \u0441\u043e \u043c\u043d\u043e\u0439." }
-    }, {
-      id: 'a2_devlet_7_3',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["ald\u0131m", "Randevu"],
-      correctOrder: ["Randevu", "ald\u0131m"],
-      translation: { tr: "Randevu ald\u0131m.", en: "I made an appointment.", ar: "\u0644\u0642\u062f \u0623\u062e\u0630\u062a \u0645\u0648\u0639\u062f\u0627.", fa: "\u0642\u0631\u0627\u0631 \u06af\u0631\u0641\u062a\u0645.", ru: "\u042f \u0437\u0430\u043f\u0438\u0441\u0430\u043b\u0441\u044f \u043d\u0430 \u043f\u0440\u0438\u0435\u043c." }
-    }, {
-      id: 'a2_devlet_7_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Benim ad\u0131m ____.",
-      correctAnswers: ["Ali"],
-      wordBank: ["Ali", "Masa", "Kalem"],
-      translation: { tr: "Benim ad\u0131m Ali.", en: "My name is Ali.", ar: "\u0627\u0633\u0645\u064a \u0639\u0644\u064a.", fa: "\u0646\u0627\u0645 \u0645\u0646 \u0639\u0644\u06cc \u0627\u0633\u062a.", ru: "\u041c\u0435\u043d\u044f \u0437\u043e\u0432\u0443\u0442 \u0410\u043b\u0438." }
-    }, {
-      id: 'a2_devlet_7_5',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Buras\u0131 ____ dairesi.",
-      correctAnswers: ["Devlet"],
-      wordBank: ["Devlet", "Banka", "Ev"],
-      translation: { tr: "Buras\u0131 devlet dairesi.", en: "This is a government office.", ar: "\u0647\u0630\u0647 \u062f\u0627\u0626\u0631\u0629 \u062d\u0643\u0648\u0645\u064a\u0629.", fa: "\u0627\u06cc\u0646 \u0627\u062f\u0627\u0631\u0647 \u062f\u0648\u0644\u062a\u06cc \u0627\u0633\u062a.", ru: "\u042d\u0442\u043e \u0433\u043e\u0441\u0443\u0434\u0430\u0440\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u0435 \u0443\u0447\u0440\u0435\u0436\u0434\u0435\u043d\u0438\u0435." }
-    }] },{ id: 'a2_devlet_8', lessonNumber: 8, lessonType: 'rpg', title: { tr: "Diyalog 2", en: "Dialogue 2", ar: "\u062d\u0648\u0627\u0631 2", fa: "\u06af\u0641\u062a\u06af\u0648 2", ru: "\u0414\u0438\u0430\u043b\u043e\u0433 2" }, xpReward: 35, coinReward: 15, exercises: [{
-      id: 'a2_devlet_8_1',
-      type: 'rpg_dialogue',
-      scenario: { tr: "RPG Senaryosu 2", en: "RPG Scenario 2", ar: "\u0633\u064a\u0646\u0627\u0631\u064a\u0648 RPG 2", fa: "\u0633\u0646\u0627\u0631\u06cc\u0648 RPG 2", ru: "\u0421\u0446\u0435\u043d\u0430\u0440\u0438\u0439 RPG 2" },
-      scenarioEmoji: '🗣️',
-      startNodeId: 'n1',
-      nodes: [
-        {
-          nodeId: 'n1', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "Merhaba, size nas\u0131l yard\u0131mc\u0131 olabilirim?", en: "Hello, how can I help you?", ar: "\u0645\u0631\u062d\u0628\u0627\u060c \u0643\u064a\u0641 \u064a\u0645\u0643\u0646\u0646\u064a \u0645\u0633\u0627\u0639\u062f\u062a\u0643\u061f", fa: "\u0633\u0644\u0627\u0645\u060c \u0686\u0637\u0648\u0631 \u0645\u06cc\u200c\u062a\u0648\u0627\u0646\u0645 \u06a9\u0645\u06a9 \u06a9\u0646\u0645\u061f", ru: "\u0417\u0434\u0440\u0430\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435, \u0447\u0435\u043c \u043c\u043e\u0433\u0443 \u043f\u043e\u043c\u043e\u0447\u044c?" },
-          options: [
-            { id: 'o1', turkish: 'Evet, lütfen.', hint: { tr: "Yes, please.", en: "Yes, please.", ar: "\u0646\u0639\u0645 \u0645\u0646 \u0641\u0636\u0644\u0643.", fa: "\u0628\u0644\u0647 \u0644\u0637\u0641\u0627.", ru: "\u0414\u0430, \u043f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430." }, isCorrect: true, deductsHeart: false, responseTone: 'success', npcResponse: { tr: "Peki, i\u015fleminizi yap\u0131yorum.", en: "Okay, processing.", ar: "\u062d\u0633\u0646\u0627\u060c \u062c\u0627\u0631\u064a \u0627\u0644\u062a\u0646\u0641\u064a\u0630.", fa: "\u0628\u0627\u0634\u0647\u060c \u062f\u0631 \u062d\u0627\u0644 \u0627\u0646\u062c\u0627\u0645.", ru: "\u0425\u043e\u0440\u043e\u0448\u043e, \u0432\u044b\u043f\u043e\u043b\u043d\u044f\u044e." }, nextNodeId: 'end' }
-          ]
-        },
-        {
-          nodeId: 'end', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "\u0130yi g\u00fcnler.", en: "Have a good day.", ar: "\u064a\u0648\u0645 \u0633\u0639\u064a\u062f.", fa: "\u0631\u0648\u0632 \u0628\u062e\u06cc\u0631.", ru: "\u0425\u043e\u0440\u043e\u0448\u0435\u0433\u043e \u0434\u043d\u044f." },
-          options: [], isFinal: true
-        }
-      ]
-    }] },{ id: 'a2_devlet_9', lessonNumber: 9, lessonType: 'boss_fight', title: { tr: "Patron Sava\u015f\u0131", en: "Boss Fight", ar: "\u0645\u0639\u0631\u0643\u0629 \u0627\u0644\u0632\u0639\u064a\u0645", fa: "\u0645\u0628\u0627\u0631\u0632\u0647 \u0628\u0627 \u0631\u0626\u06cc\u0633", ru: "\u0411\u043e\u0441\u0441 \u0431\u043e\u0439" }, xpReward: 70, coinReward: 35, exercises: [{
-      id: 'a2_devlet_1_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "evrak", translation: { tr: "evrak", en: "document", ar: "\u0648\u062b\u064a\u0642\u0629", fa: "\u0633\u0646\u062f", ru: "\u0434\u043e\u043a\u0443\u043c\u0435\u043d\u0442" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_devlet_1_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "ba\u015fvuru", translation: { tr: "ba\u015fvuru", en: "application", ar: "\u0637\u0644\u0628", fa: "\u062f\u0631\u062e\u0648\u0627\u0633\u062a", ru: "\u0437\u0430\u044f\u0432\u043b\u0435\u043d\u0438\u0435" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_devlet_5_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "ret", translation: { tr: "ret", en: "rejection", ar: "\u0631\u0641\u0636", fa: "\u0631\u062f", ru: "\u043e\u0442\u043a\u0430\u0437" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_devlet_5_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "dilek\u00e7e", translation: { tr: "dilek\u00e7e", en: "petition", ar: "\u0639\u0631\u064a\u0636\u0629", fa: "\u0639\u0631\u06cc\u0636\u0647", ru: "\u043f\u0435\u0442\u0438\u0446\u0438\u044f" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_devlet_3_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["istiyorum", "Ba\u015fvurmak"],
-      correctOrder: ["Ba\u015fvurmak", "istiyorum"],
-      translation: { tr: "Ba\u015fvurmak istiyorum.", en: "I want to apply.", ar: "\u0623\u0631\u064a\u062f \u0627\u0644\u062a\u0642\u062f\u064a\u0645.", fa: "\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645 \u062f\u0631\u062e\u0648\u0627\u0633\u062a \u062f\u0647\u0645.", ru: "\u042f \u0445\u043e\u0447\u0443 \u043f\u043e\u0434\u0430\u0442\u044c \u0437\u0430\u044f\u0432\u043b\u0435\u043d\u0438\u0435." }
-    }, {
-      id: 'a2_devlet_7_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["istiyorum", "Ba\u015fvurmak"],
-      correctOrder: ["Ba\u015fvurmak", "istiyorum"],
-      translation: { tr: "Ba\u015fvurmak istiyorum.", en: "I want to apply.", ar: "\u0623\u0631\u064a\u062f \u0627\u0644\u062a\u0642\u062f\u064a\u0645.", fa: "\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645 \u062f\u0631\u062e\u0648\u0627\u0633\u062a \u062f\u0647\u0645.", ru: "\u042f \u0445\u043e\u0447\u0443 \u043f\u043e\u0434\u0430\u0442\u044c \u0437\u0430\u044f\u0432\u043b\u0435\u043d\u0438\u0435." }
-    }, {
-      id: 'a2_devlet_3_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Benim ad\u0131m ____.",
-      correctAnswers: ["Ali"],
-      wordBank: ["Ali", "Masa", "Kalem"],
-      translation: { tr: "Benim ad\u0131m Ali.", en: "My name is Ali.", ar: "\u0627\u0633\u0645\u064a \u0639\u0644\u064a.", fa: "\u0646\u0627\u0645 \u0645\u0646 \u0639\u0644\u06cc \u0627\u0633\u062a.", ru: "\u041c\u0435\u043d\u044f \u0437\u043e\u0432\u0443\u0442 \u0410\u043b\u0438." }
-    }, {
-      id: 'a2_devlet_7_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Benim ad\u0131m ____.",
-      correctAnswers: ["Ali"],
-      wordBank: ["Ali", "Masa", "Kalem"],
-      translation: { tr: "Benim ad\u0131m Ali.", en: "My name is Ali.", ar: "\u0627\u0633\u0645\u064a \u0639\u0644\u064a.", fa: "\u0646\u0627\u0645 \u0645\u0646 \u0639\u0644\u06cc \u0627\u0633\u062a.", ru: "\u041c\u0435\u043d\u044f \u0437\u043e\u0432\u0443\u0442 \u0410\u043b\u0438." }
-    }] }] },{ id: 'a2_banka', unitNumber: 2, name: { tr: "Banka", en: "Bank", ar: "\u0628\u0646\u0643", fa: "\u0628\u0627\u0646\u06a9", ru: "\u0411\u0430\u043d\u043a" }, emoji: '🏦', color: 'from-emerald-500 to-green-700', lessons: [{ id: 'a2_banka_1', lessonNumber: 1, lessonType: 'vocabulary', title: { tr: "Kelime: B\u00f6l\u00fcm 1", en: "Vocab 1", ar: "\u0645\u0641\u0631\u062f\u0627\u062a 1", fa: "\u0648\u0627\u0698\u06af\u0627\u0646 1", ru: "\u0421\u043b\u043e\u0432\u0430\u0440\u044c 1" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_banka_1_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "hesap", translation: { tr: "hesap", en: "account", ar: "\u062d\u0633\u0627\u0628", fa: "\u062d\u0633\u0627\u0628", ru: "\u0441\u0447\u0435\u0442" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_banka_1_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "para", translation: { tr: "para", en: "money", ar: "\u0645\u0627\u0644", fa: "\u067e\u0648\u0644", ru: "\u0434\u0435\u043d\u044c\u0433\u0438" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_banka_1_2',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "kredi", translation: { tr: "kredi", en: "credit", ar: "\u0627\u0626\u062a\u0645\u0627\u0646", fa: "\u0627\u0639\u062a\u0628\u0627\u0631", ru: "\u043a\u0440\u0435\u0434\u0438\u0442" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_banka_1_3',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "kart", translation: { tr: "kart", en: "card", ar: "\u0628\u0637\u0627\u0642\u0629", fa: "\u06a9\u0627\u0631\u062a", ru: "\u043a\u0430\u0440\u0442\u0430" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_banka_1_4',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "\u015fifre", translation: { tr: "\u015fifre", en: "password", ar: "\u0643\u0644\u0645\u0629 \u0633\u0631", fa: "\u0631\u0645\u0632", ru: "\u043f\u0430\u0440\u043e\u043b\u044c" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }] },{ id: 'a2_banka_2', lessonNumber: 2, lessonType: 'practice', title: { tr: "Pratik 1", en: "Practice 1", ar: "\u062a\u062f\u0631\u064a\u0628 1", fa: "\u062a\u0645\u0631\u06cc\u0646 1", ru: "\u041f\u0440\u0430\u043a\u0442\u0438\u043a\u0430 1" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_banka_2_1',
-      type: 'drag_drop',
-      prompt: { tr: "E\u015fle\u015ftirin", en: "Match", ar: "\u062a\u0637\u0627\u0628\u0642", fa: "\u062a\u0637\u0627\u0628\u0642", ru: "\u0421\u043e\u043f\u043e\u0441\u0442\u0430\u0432\u044c\u0442\u0435" },
-      pairs: [{ id: 'p1', turkish: "hesap", translation: { tr: "account", en: "account", ar: "\u062d\u0633\u0627\u0628", fa: "\u062d\u0633\u0627\u0628", ru: "\u0441\u0447\u0435\u0442" } }, { id: 'p2', turkish: "para", translation: { tr: "money", en: "money", ar: "\u0645\u0627\u0644", fa: "\u067e\u0648\u0644", ru: "\u0434\u0435\u043d\u044c\u0433\u0438" } }, { id: 'p3', turkish: "kredi", translation: { tr: "credit", en: "credit", ar: "\u0627\u0626\u062a\u0645\u0627\u0646", fa: "\u0627\u0639\u062a\u0628\u0627\u0631", ru: "\u043a\u0440\u0435\u0434\u0438\u0442" } }, { id: 'p4', turkish: "kart", translation: { tr: "card", en: "card", ar: "\u0628\u0637\u0627\u0642\u0629", fa: "\u06a9\u0627\u0631\u062a", ru: "\u043a\u0430\u0440\u0442\u0430" } }, { id: 'p5', turkish: "\u015fifre", translation: { tr: "password", en: "password", ar: "\u0643\u0644\u0645\u0629 \u0633\u0631", fa: "\u0631\u0645\u0632", ru: "\u043f\u0430\u0440\u043e\u043b\u044c" } }]
-    }] },{ id: 'a2_banka_3', lessonNumber: 3, lessonType: 'sentence_building', title: { tr: "C\u00fcmle Kurma 1", en: "Sentences 1", ar: "\u062c\u0645\u0644 1", fa: "\u062c\u0645\u0644\u0627\u062a 1", ru: "\u041f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u044f 1" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_banka_3_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["istiyorum", "Hesap", "a\u00e7mak"],
-      correctOrder: ["Hesap", "a\u00e7mak", "istiyorum"],
-      translation: { tr: "Hesap a\u00e7mak istiyorum.", en: "I want to open an account.", ar: "\u0623\u0631\u064a\u062f \u0641\u062a\u062d \u062d\u0633\u0627\u0628.", fa: "\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645 \u062d\u0633\u0627\u0628 \u0628\u0627\u0632 \u06a9\u0646\u0645.", ru: "\u042f \u0445\u043e\u0447\u0443 \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u0441\u0447\u0435\u0442." }
-    }, {
-      id: 'a2_banka_3_2',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["\u00e7ekece\u011fim", "Para"],
-      correctOrder: ["Para", "\u00e7ekece\u011fim"],
-      translation: { tr: "Para \u00e7ekece\u011fim.", en: "I will withdraw money.", ar: "\u0633\u0623\u0633\u062d\u0628 \u0627\u0644\u0645\u0627\u0644.", fa: "\u067e\u0648\u0644 \u0628\u0631\u062f\u0627\u0634\u062a \u0645\u06cc\u200c\u06a9\u0646\u0645.", ru: "\u042f \u0441\u043d\u0438\u043c\u0443 \u0434\u0435\u043d\u044c\u0433\u0438." }
-    }, {
-      id: 'a2_banka_3_3',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["unuttum", "\u015eifremi"],
-      correctOrder: ["\u015eifremi", "unuttum"],
-      translation: { tr: "\u015eifremi unuttum.", en: "I forgot my password.", ar: "\u0644\u0642\u062f \u0646\u0633\u064a\u062a \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062e\u0627\u0635\u0629 \u0628\u064a.", fa: "\u0631\u0645\u0632 \u0639\u0628\u0648\u0631 \u062e\u0648\u062f \u0631\u0627 \u0641\u0631\u0627\u0645\u0648\u0634 \u06a9\u0631\u062f\u0645.", ru: "\u042f \u0437\u0430\u0431\u044b\u043b \u0441\u0432\u043e\u0439 \u043f\u0430\u0440\u043e\u043b\u044c." }
-    }, {
-      id: 'a2_banka_3_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Bir ____ a\u00e7mak istiyorum.",
-      correctAnswers: ["hesap"],
-      wordBank: ["hesap", "kap\u0131", "kitap"],
-      translation: { tr: "Bir hesap a\u00e7mak istiyorum.", en: "I want to open an account.", ar: "\u0623\u0631\u064a\u062f \u0641\u062a\u062d \u062d\u0633\u0627\u0628.", fa: "\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645 \u062d\u0633\u0627\u0628 \u0628\u0627\u0632 \u06a9\u0646\u0645.", ru: "\u042f \u0445\u043e\u0447\u0443 \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u0441\u0447\u0435\u0442." }
-    }, {
-      id: 'a2_banka_3_5',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Kredi ____ almak istiyorum.",
-      correctAnswers: ["kart\u0131"],
-      wordBank: ["kart\u0131", "paras\u0131", "hesab\u0131"],
-      translation: { tr: "Kredi kart\u0131 almak istiyorum.", en: "I want to get a credit card.", ar: "\u0623\u0631\u064a\u062f \u0627\u0644\u062d\u0635\u0648\u0644 \u0639\u0644\u0649 \u0628\u0637\u0627\u0642\u0629 \u0627\u0626\u062a\u0645\u0627\u0646.", fa: "\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645 \u06a9\u0627\u0631\u062a \u0627\u0639\u062a\u0628\u0627\u0631\u06cc \u0628\u06af\u06cc\u0631\u0645.", ru: "\u042f \u0445\u043e\u0447\u0443 \u043f\u043e\u043b\u0443\u0447\u0438\u0442\u044c \u043a\u0440\u0435\u0434\u0438\u0442\u043d\u0443\u044e \u043a\u0430\u0440\u0442\u0443." }
-    }] },{ id: 'a2_banka_4', lessonNumber: 4, lessonType: 'rpg', title: { tr: "Diyalog 1", en: "Dialogue 1", ar: "\u062d\u0648\u0627\u0631 1", fa: "\u06af\u0641\u062a\u06af\u0648 1", ru: "\u0414\u0438\u0430\u043b\u043e\u0433 1" }, xpReward: 35, coinReward: 15, exercises: [{
-      id: 'a2_banka_4_1',
-      type: 'rpg_dialogue',
-      scenario: { tr: "RPG Senaryosu", en: "RPG Scenario", ar: "\u0633\u064a\u0646\u0627\u0631\u064a\u0648 RPG", fa: "\u0633\u0646\u0627\u0631\u06cc\u0648 RPG", ru: "\u0421\u0446\u0435\u043d\u0430\u0440\u0438\u0439 RPG" },
-      scenarioEmoji: '🗣️',
-      startNodeId: 'n1',
-      nodes: [
-        {
-          nodeId: 'n1', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "Merhaba, size nas\u0131l yard\u0131mc\u0131 olabilirim?", en: "Hello, how can I help you?", ar: "\u0645\u0631\u062d\u0628\u0627\u060c \u0643\u064a\u0641 \u064a\u0645\u0643\u0646\u0646\u064a \u0645\u0633\u0627\u0639\u062f\u062a\u0643\u061f", fa: "\u0633\u0644\u0627\u0645\u060c \u0686\u0637\u0648\u0631 \u0645\u06cc\u200c\u062a\u0648\u0627\u0646\u0645 \u06a9\u0645\u06a9 \u06a9\u0646\u0645\u061f", ru: "\u0417\u0434\u0440\u0430\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435, \u0447\u0435\u043c \u043c\u043e\u0433\u0443 \u043f\u043e\u043c\u043e\u0447\u044c?" },
-          options: [
-            { id: 'o1', turkish: 'Evet, lütfen.', hint: { tr: "Yes, please.", en: "Yes, please.", ar: "\u0646\u0639\u0645 \u0645\u0646 \u0641\u0636\u0644\u0643.", fa: "\u0628\u0644\u0647 \u0644\u0637\u0641\u0627.", ru: "\u0414\u0430, \u043f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430." }, isCorrect: true, deductsHeart: false, responseTone: 'success', npcResponse: { tr: "Peki, i\u015fleminizi yap\u0131yorum.", en: "Okay, processing.", ar: "\u062d\u0633\u0646\u0627\u060c \u062c\u0627\u0631\u064a \u0627\u0644\u062a\u0646\u0641\u064a\u0630.", fa: "\u0628\u0627\u0634\u0647\u060c \u062f\u0631 \u062d\u0627\u0644 \u0627\u0646\u062c\u0627\u0645.", ru: "\u0425\u043e\u0440\u043e\u0448\u043e, \u0432\u044b\u043f\u043e\u043b\u043d\u044f\u044e." }, nextNodeId: 'end' }
-          ]
-        },
-        {
-          nodeId: 'end', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "\u0130yi g\u00fcnler.", en: "Have a good day.", ar: "\u064a\u0648\u0645 \u0633\u0639\u064a\u062f.", fa: "\u0631\u0648\u0632 \u0628\u062e\u06cc\u0631.", ru: "\u0425\u043e\u0440\u043e\u0448\u0435\u0433\u043e \u0434\u043d\u044f." },
-          options: [], isFinal: true
-        }
-      ]
-    }] },{ id: 'a2_banka_5', lessonNumber: 5, lessonType: 'vocabulary', title: { tr: "Kelime: B\u00f6l\u00fcm 2", en: "Vocab 2", ar: "\u0645\u0641\u0631\u062f\u0627\u062a 2", fa: "\u0648\u0627\u0698\u06af\u0627\u0646 2", ru: "\u0421\u043b\u043e\u0432\u0430\u0440\u044c 2" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_banka_5_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "faiz", translation: { tr: "faiz", en: "interest", ar: "\u0641\u0627\u0626\u062f\u0629", fa: "\u0628\u0647\u0631\u0647", ru: "\u043f\u0440\u043e\u0446\u0435\u043d\u0442" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_banka_5_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "kur", translation: { tr: "kur", en: "exchange rate", ar: "\u0633\u0639\u0631 \u0627\u0644\u0635\u0631\u0641", fa: "\u0646\u0631\u062e \u0627\u0631\u0632", ru: "\u043a\u0443\u0440\u0441" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_banka_5_2',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "d\u00f6viz", translation: { tr: "d\u00f6viz", en: "foreign currency", ar: "\u0639\u0645\u0644\u0629 \u0623\u062c\u0646\u0628\u064a\u0629", fa: "\u0627\u0631\u0632", ru: "\u0432\u0430\u043b\u044e\u0442\u0430" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_banka_5_3',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "komisyon", translation: { tr: "komisyon", en: "commission", ar: "\u0639\u0645\u0648\u0644\u0629", fa: "\u06a9\u0645\u06cc\u0633\u06cc\u0648\u0646", ru: "\u043a\u043e\u043c\u0438\u0441\u0441\u0438\u044f" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_banka_5_4',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "bloke", translation: { tr: "bloke", en: "block", ar: "\u062d\u0638\u0631", fa: "\u0645\u0633\u062f\u0648\u062f", ru: "\u0431\u043b\u043e\u043a" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }] },{ id: 'a2_banka_6', lessonNumber: 6, lessonType: 'practice', title: { tr: "Pratik 2", en: "Practice 2", ar: "\u062a\u062f\u0631\u064a\u0628 2", fa: "\u062a\u0645\u0631\u06cc\u0646 2", ru: "\u041f\u0440\u0430\u043a\u0442\u0438\u043a\u0430 2" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_banka_6_1',
-      type: 'drag_drop',
-      prompt: { tr: "E\u015fle\u015ftirin", en: "Match", ar: "\u062a\u0637\u0627\u0628\u0642", fa: "\u062a\u0637\u0627\u0628\u0642", ru: "\u0421\u043e\u043f\u043e\u0441\u0442\u0430\u0432\u044c\u0442\u0435" },
-      pairs: [{ id: 'p1', turkish: "faiz", translation: { tr: "interest", en: "interest", ar: "\u0641\u0627\u0626\u062f\u0629", fa: "\u0628\u0647\u0631\u0647", ru: "\u043f\u0440\u043e\u0446\u0435\u043d\u0442" } }, { id: 'p2', turkish: "kur", translation: { tr: "exchange rate", en: "exchange rate", ar: "\u0633\u0639\u0631 \u0627\u0644\u0635\u0631\u0641", fa: "\u0646\u0631\u062e \u0627\u0631\u0632", ru: "\u043a\u0443\u0440\u0441" } }, { id: 'p3', turkish: "d\u00f6viz", translation: { tr: "foreign currency", en: "foreign currency", ar: "\u0639\u0645\u0644\u0629 \u0623\u062c\u0646\u0628\u064a\u0629", fa: "\u0627\u0631\u0632", ru: "\u0432\u0430\u043b\u044e\u0442\u0430" } }, { id: 'p4', turkish: "komisyon", translation: { tr: "commission", en: "commission", ar: "\u0639\u0645\u0648\u0644\u0629", fa: "\u06a9\u0645\u06cc\u0633\u06cc\u0648\u0646", ru: "\u043a\u043e\u043c\u0438\u0441\u0441\u0438\u044f" } }, { id: 'p5', turkish: "bloke", translation: { tr: "block", en: "block", ar: "\u062d\u0638\u0631", fa: "\u0645\u0633\u062f\u0648\u062f", ru: "\u0431\u043b\u043e\u043a" } }]
-    }] },{ id: 'a2_banka_7', lessonNumber: 7, lessonType: 'sentence_building', title: { tr: "C\u00fcmle Kurma 2", en: "Sentences 2", ar: "\u062c\u0645\u0644 2", fa: "\u062c\u0645\u0644\u0627\u062a 2", ru: "\u041f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u044f 2" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_banka_7_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["istiyorum", "Hesap", "a\u00e7mak"],
-      correctOrder: ["Hesap", "a\u00e7mak", "istiyorum"],
-      translation: { tr: "Hesap a\u00e7mak istiyorum.", en: "I want to open an account.", ar: "\u0623\u0631\u064a\u062f \u0641\u062a\u062d \u062d\u0633\u0627\u0628.", fa: "\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645 \u062d\u0633\u0627\u0628 \u0628\u0627\u0632 \u06a9\u0646\u0645.", ru: "\u042f \u0445\u043e\u0447\u0443 \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u0441\u0447\u0435\u0442." }
-    }, {
-      id: 'a2_banka_7_2',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["\u00e7ekece\u011fim", "Para"],
-      correctOrder: ["Para", "\u00e7ekece\u011fim"],
-      translation: { tr: "Para \u00e7ekece\u011fim.", en: "I will withdraw money.", ar: "\u0633\u0623\u0633\u062d\u0628 \u0627\u0644\u0645\u0627\u0644.", fa: "\u067e\u0648\u0644 \u0628\u0631\u062f\u0627\u0634\u062a \u0645\u06cc\u200c\u06a9\u0646\u0645.", ru: "\u042f \u0441\u043d\u0438\u043c\u0443 \u0434\u0435\u043d\u044c\u0433\u0438." }
-    }, {
-      id: 'a2_banka_7_3',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["unuttum", "\u015eifremi"],
-      correctOrder: ["\u015eifremi", "unuttum"],
-      translation: { tr: "\u015eifremi unuttum.", en: "I forgot my password.", ar: "\u0644\u0642\u062f \u0646\u0633\u064a\u062a \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u062e\u0627\u0635\u0629 \u0628\u064a.", fa: "\u0631\u0645\u0632 \u0639\u0628\u0648\u0631 \u062e\u0648\u062f \u0631\u0627 \u0641\u0631\u0627\u0645\u0648\u0634 \u06a9\u0631\u062f\u0645.", ru: "\u042f \u0437\u0430\u0431\u044b\u043b \u0441\u0432\u043e\u0439 \u043f\u0430\u0440\u043e\u043b\u044c." }
-    }, {
-      id: 'a2_banka_7_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Bir ____ a\u00e7mak istiyorum.",
-      correctAnswers: ["hesap"],
-      wordBank: ["hesap", "kap\u0131", "kitap"],
-      translation: { tr: "Bir hesap a\u00e7mak istiyorum.", en: "I want to open an account.", ar: "\u0623\u0631\u064a\u062f \u0641\u062a\u062d \u062d\u0633\u0627\u0628.", fa: "\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645 \u062d\u0633\u0627\u0628 \u0628\u0627\u0632 \u06a9\u0646\u0645.", ru: "\u042f \u0445\u043e\u0447\u0443 \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u0441\u0447\u0435\u0442." }
-    }, {
-      id: 'a2_banka_7_5',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Kredi ____ almak istiyorum.",
-      correctAnswers: ["kart\u0131"],
-      wordBank: ["kart\u0131", "paras\u0131", "hesab\u0131"],
-      translation: { tr: "Kredi kart\u0131 almak istiyorum.", en: "I want to get a credit card.", ar: "\u0623\u0631\u064a\u062f \u0627\u0644\u062d\u0635\u0648\u0644 \u0639\u0644\u0649 \u0628\u0637\u0627\u0642\u0629 \u0627\u0626\u062a\u0645\u0627\u0646.", fa: "\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645 \u06a9\u0627\u0631\u062a \u0627\u0639\u062a\u0628\u0627\u0631\u06cc \u0628\u06af\u06cc\u0631\u0645.", ru: "\u042f \u0445\u043e\u0447\u0443 \u043f\u043e\u043b\u0443\u0447\u0438\u0442\u044c \u043a\u0440\u0435\u0434\u0438\u0442\u043d\u0443\u044e \u043a\u0430\u0440\u0442\u0443." }
-    }] },{ id: 'a2_banka_8', lessonNumber: 8, lessonType: 'rpg', title: { tr: "Diyalog 2", en: "Dialogue 2", ar: "\u062d\u0648\u0627\u0631 2", fa: "\u06af\u0641\u062a\u06af\u0648 2", ru: "\u0414\u0438\u0430\u043b\u043e\u0433 2" }, xpReward: 35, coinReward: 15, exercises: [{
-      id: 'a2_banka_8_1',
-      type: 'rpg_dialogue',
-      scenario: { tr: "RPG Senaryosu 2", en: "RPG Scenario 2", ar: "\u0633\u064a\u0646\u0627\u0631\u064a\u0648 RPG 2", fa: "\u0633\u0646\u0627\u0631\u06cc\u0648 RPG 2", ru: "\u0421\u0446\u0435\u043d\u0430\u0440\u0438\u0439 RPG 2" },
-      scenarioEmoji: '🗣️',
-      startNodeId: 'n1',
-      nodes: [
-        {
-          nodeId: 'n1', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "Merhaba, size nas\u0131l yard\u0131mc\u0131 olabilirim?", en: "Hello, how can I help you?", ar: "\u0645\u0631\u062d\u0628\u0627\u060c \u0643\u064a\u0641 \u064a\u0645\u0643\u0646\u0646\u064a \u0645\u0633\u0627\u0639\u062f\u062a\u0643\u061f", fa: "\u0633\u0644\u0627\u0645\u060c \u0686\u0637\u0648\u0631 \u0645\u06cc\u200c\u062a\u0648\u0627\u0646\u0645 \u06a9\u0645\u06a9 \u06a9\u0646\u0645\u061f", ru: "\u0417\u0434\u0440\u0430\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435, \u0447\u0435\u043c \u043c\u043e\u0433\u0443 \u043f\u043e\u043c\u043e\u0447\u044c?" },
-          options: [
-            { id: 'o1', turkish: 'Evet, lütfen.', hint: { tr: "Yes, please.", en: "Yes, please.", ar: "\u0646\u0639\u0645 \u0645\u0646 \u0641\u0636\u0644\u0643.", fa: "\u0628\u0644\u0647 \u0644\u0637\u0641\u0627.", ru: "\u0414\u0430, \u043f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430." }, isCorrect: true, deductsHeart: false, responseTone: 'success', npcResponse: { tr: "Peki, i\u015fleminizi yap\u0131yorum.", en: "Okay, processing.", ar: "\u062d\u0633\u0646\u0627\u060c \u062c\u0627\u0631\u064a \u0627\u0644\u062a\u0646\u0641\u064a\u0630.", fa: "\u0628\u0627\u0634\u0647\u060c \u062f\u0631 \u062d\u0627\u0644 \u0627\u0646\u062c\u0627\u0645.", ru: "\u0425\u043e\u0440\u043e\u0448\u043e, \u0432\u044b\u043f\u043e\u043b\u043d\u044f\u044e." }, nextNodeId: 'end' }
-          ]
-        },
-        {
-          nodeId: 'end', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "\u0130yi g\u00fcnler.", en: "Have a good day.", ar: "\u064a\u0648\u0645 \u0633\u0639\u064a\u062f.", fa: "\u0631\u0648\u0632 \u0628\u062e\u06cc\u0631.", ru: "\u0425\u043e\u0440\u043e\u0448\u0435\u0433\u043e \u0434\u043d\u044f." },
-          options: [], isFinal: true
-        }
-      ]
-    }] },{ id: 'a2_banka_9', lessonNumber: 9, lessonType: 'boss_fight', title: { tr: "Patron Sava\u015f\u0131", en: "Boss Fight", ar: "\u0645\u0639\u0631\u0643\u0629 \u0627\u0644\u0632\u0639\u064a\u0645", fa: "\u0645\u0628\u0627\u0631\u0632\u0647 \u0628\u0627 \u0631\u0626\u06cc\u0633", ru: "\u0411\u043e\u0441\u0441 \u0431\u043e\u0439" }, xpReward: 70, coinReward: 35, exercises: [{
-      id: 'a2_banka_1_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "hesap", translation: { tr: "hesap", en: "account", ar: "\u062d\u0633\u0627\u0628", fa: "\u062d\u0633\u0627\u0628", ru: "\u0441\u0447\u0435\u0442" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_banka_1_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "para", translation: { tr: "para", en: "money", ar: "\u0645\u0627\u0644", fa: "\u067e\u0648\u0644", ru: "\u0434\u0435\u043d\u044c\u0433\u0438" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_banka_5_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "faiz", translation: { tr: "faiz", en: "interest", ar: "\u0641\u0627\u0626\u062f\u0629", fa: "\u0628\u0647\u0631\u0647", ru: "\u043f\u0440\u043e\u0446\u0435\u043d\u0442" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_banka_5_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "kur", translation: { tr: "kur", en: "exchange rate", ar: "\u0633\u0639\u0631 \u0627\u0644\u0635\u0631\u0641", fa: "\u0646\u0631\u062e \u0627\u0631\u0632", ru: "\u043a\u0443\u0440\u0441" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_banka_3_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["istiyorum", "Hesap", "a\u00e7mak"],
-      correctOrder: ["Hesap", "a\u00e7mak", "istiyorum"],
-      translation: { tr: "Hesap a\u00e7mak istiyorum.", en: "I want to open an account.", ar: "\u0623\u0631\u064a\u062f \u0641\u062a\u062d \u062d\u0633\u0627\u0628.", fa: "\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645 \u062d\u0633\u0627\u0628 \u0628\u0627\u0632 \u06a9\u0646\u0645.", ru: "\u042f \u0445\u043e\u0447\u0443 \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u0441\u0447\u0435\u0442." }
-    }, {
-      id: 'a2_banka_7_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["istiyorum", "Hesap", "a\u00e7mak"],
-      correctOrder: ["Hesap", "a\u00e7mak", "istiyorum"],
-      translation: { tr: "Hesap a\u00e7mak istiyorum.", en: "I want to open an account.", ar: "\u0623\u0631\u064a\u062f \u0641\u062a\u062d \u062d\u0633\u0627\u0628.", fa: "\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645 \u062d\u0633\u0627\u0628 \u0628\u0627\u0632 \u06a9\u0646\u0645.", ru: "\u042f \u0445\u043e\u0447\u0443 \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u0441\u0447\u0435\u0442." }
-    }, {
-      id: 'a2_banka_3_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Bir ____ a\u00e7mak istiyorum.",
-      correctAnswers: ["hesap"],
-      wordBank: ["hesap", "kap\u0131", "kitap"],
-      translation: { tr: "Bir hesap a\u00e7mak istiyorum.", en: "I want to open an account.", ar: "\u0623\u0631\u064a\u062f \u0641\u062a\u062d \u062d\u0633\u0627\u0628.", fa: "\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645 \u062d\u0633\u0627\u0628 \u0628\u0627\u0632 \u06a9\u0646\u0645.", ru: "\u042f \u0445\u043e\u0447\u0443 \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u0441\u0447\u0435\u0442." }
-    }, {
-      id: 'a2_banka_7_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Bir ____ a\u00e7mak istiyorum.",
-      correctAnswers: ["hesap"],
-      wordBank: ["hesap", "kap\u0131", "kitap"],
-      translation: { tr: "Bir hesap a\u00e7mak istiyorum.", en: "I want to open an account.", ar: "\u0623\u0631\u064a\u062f \u0641\u062a\u062d \u062d\u0633\u0627\u0628.", fa: "\u0645\u06cc\u200c\u062e\u0648\u0627\u0647\u0645 \u062d\u0633\u0627\u0628 \u0628\u0627\u0632 \u06a9\u0646\u0645.", ru: "\u042f \u0445\u043e\u0447\u0443 \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u0441\u0447\u0435\u0442." }
-    }] }] },{ id: 'a2_hastane', unitNumber: 3, name: { tr: "Hastane", en: "Hospital", ar: "\u0645\u0633\u062a\u0634\u0641\u0649", fa: "\u0628\u06cc\u0645\u0627\u0631\u0633\u062a\u0627\u0646", ru: "\u0411\u043e\u043b\u044c\u043d\u0438\u0446\u0430" }, emoji: '🏥', color: 'from-blue-400 to-indigo-600', lessons: [{ id: 'a2_hastane_1', lessonNumber: 1, lessonType: 'vocabulary', title: { tr: "Kelime: B\u00f6l\u00fcm 1", en: "Vocab 1", ar: "\u0645\u0641\u0631\u062f\u0627\u062a 1", fa: "\u0648\u0627\u0698\u06af\u0627\u0646 1", ru: "\u0421\u043b\u043e\u0432\u0430\u0440\u044c 1" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_hastane_1_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "doktor", translation: { tr: "doktor", en: "doctor", ar: "\u0637\u0628\u064a\u0628", fa: "\u062f\u06a9\u062a\u0631", ru: "\u0432\u0440\u0430\u0447" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_hastane_1_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "hasta", translation: { tr: "hasta", en: "patient", ar: "\u0645\u0631\u064a\u0636", fa: "\u0628\u06cc\u0645\u0627\u0631", ru: "\u043f\u0430\u0446\u0438\u0435\u043d\u0442" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_hastane_1_2',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "ila\u00e7", translation: { tr: "ila\u00e7", en: "medicine", ar: "\u062f\u0648\u0627\u0621", fa: "\u062f\u0627\u0631\u0648", ru: "\u043b\u0435\u043a\u0430\u0440\u0441\u0442\u0432\u043e" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_hastane_1_3',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "re\u00e7ete", translation: { tr: "re\u00e7ete", en: "prescription", ar: "\u0648\u0635\u0641\u0629 \u0637\u0628\u064a\u0629", fa: "\u0646\u0633\u062e\u0647", ru: "\u0440\u0435\u0446\u0435\u043f\u0442" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_hastane_1_4',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "a\u011fr\u0131", translation: { tr: "a\u011fr\u0131", en: "pain", ar: "\u0623\u0644\u0645", fa: "\u062f\u0631\u062f", ru: "\u0431\u043e\u043b\u044c" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }] },{ id: 'a2_hastane_2', lessonNumber: 2, lessonType: 'practice', title: { tr: "Pratik 1", en: "Practice 1", ar: "\u062a\u062f\u0631\u064a\u0628 1", fa: "\u062a\u0645\u0631\u06cc\u0646 1", ru: "\u041f\u0440\u0430\u043a\u0442\u0438\u043a\u0430 1" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_hastane_2_1',
-      type: 'drag_drop',
-      prompt: { tr: "E\u015fle\u015ftirin", en: "Match", ar: "\u062a\u0637\u0627\u0628\u0642", fa: "\u062a\u0637\u0627\u0628\u0642", ru: "\u0421\u043e\u043f\u043e\u0441\u0442\u0430\u0432\u044c\u0442\u0435" },
-      pairs: [{ id: 'p1', turkish: "doktor", translation: { tr: "doctor", en: "doctor", ar: "\u0637\u0628\u064a\u0628", fa: "\u062f\u06a9\u062a\u0631", ru: "\u0432\u0440\u0430\u0447" } }, { id: 'p2', turkish: "hasta", translation: { tr: "patient", en: "patient", ar: "\u0645\u0631\u064a\u0636", fa: "\u0628\u06cc\u0645\u0627\u0631", ru: "\u043f\u0430\u0446\u0438\u0435\u043d\u0442" } }, { id: 'p3', turkish: "ila\u00e7", translation: { tr: "medicine", en: "medicine", ar: "\u062f\u0648\u0627\u0621", fa: "\u062f\u0627\u0631\u0648", ru: "\u043b\u0435\u043a\u0430\u0440\u0441\u0442\u0432\u043e" } }, { id: 'p4', turkish: "re\u00e7ete", translation: { tr: "prescription", en: "prescription", ar: "\u0648\u0635\u0641\u0629 \u0637\u0628\u064a\u0629", fa: "\u0646\u0633\u062e\u0647", ru: "\u0440\u0435\u0446\u0435\u043f\u0442" } }, { id: 'p5', turkish: "a\u011fr\u0131", translation: { tr: "pain", en: "pain", ar: "\u0623\u0644\u0645", fa: "\u062f\u0631\u062f", ru: "\u0431\u043e\u043b\u044c" } }]
-    }] },{ id: 'a2_hastane_3', lessonNumber: 3, lessonType: 'sentence_building', title: { tr: "C\u00fcmle Kurma 1", en: "Sentences 1", ar: "\u062c\u0645\u0644 1", fa: "\u062c\u0645\u0644\u0627\u062a 1", ru: "\u041f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u044f 1" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_hastane_3_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["hastay\u0131m", "\u00c7ok"],
-      correctOrder: ["\u00c7ok", "hastay\u0131m"],
-      translation: { tr: "\u00c7ok hastay\u0131m.", en: "I am very sick.", ar: "\u0623\u0646\u0627 \u0645\u0631\u064a\u0636 \u062c\u062f\u0627.", fa: "\u0645\u0646 \u062e\u06cc\u0644\u06cc \u0628\u06cc\u0645\u0627\u0631 \u0647\u0633\u062a\u0645.", ru: "\u042f \u043e\u0447\u0435\u043d\u044c \u0431\u043e\u043b\u0435\u043d." }
-    }, {
-      id: 'a2_hastane_3_2',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["a\u011fr\u0131yor", "Ba\u015f\u0131m"],
-      correctOrder: ["Ba\u015f\u0131m", "a\u011fr\u0131yor"],
-      translation: { tr: "Ba\u015f\u0131m a\u011fr\u0131yor.", en: "My head hurts.", ar: "\u0631\u0623\u0633\u064a \u064a\u0624\u0644\u0645\u0646\u064a.", fa: "\u0633\u0631\u0645 \u062f\u0631\u062f \u0645\u06cc\u200c\u06a9\u0646\u062f.", ru: "\u0423 \u043c\u0435\u043d\u044f \u0431\u043e\u043b\u0438\u0442 \u0433\u043e\u043b\u043e\u0432\u0430." }
-    }, {
-      id: 'a2_hastane_3_3',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["alaca\u011f\u0131m", "\u0130la\u00e7"],
-      correctOrder: ["\u0130la\u00e7", "alaca\u011f\u0131m"],
-      translation: { tr: "\u0130la\u00e7 alaca\u011f\u0131m.", en: "I will buy medicine.", ar: "\u0633\u0623\u0634\u062a\u0631\u064a \u062f\u0648\u0627\u0621.", fa: "\u062f\u0627\u0631\u0648 \u062e\u0648\u0627\u0647\u0645 \u062e\u0631\u06cc\u062f.", ru: "\u042f \u043a\u0443\u043f\u043b\u044e \u043b\u0435\u043a\u0430\u0440\u0441\u0442\u0432\u043e." }
-    }, {
-      id: 'a2_hastane_3_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Bana bir ____ yazar m\u0131s\u0131n\u0131z?",
-      correctAnswers: ["re\u00e7ete"],
-      wordBank: ["re\u00e7ete", "kitap", "mektup"],
-      translation: { tr: "Bana bir re\u00e7ete yazar m\u0131s\u0131n\u0131z?", en: "Can you write me a prescription?", ar: "\u0647\u0644 \u064a\u0645\u0643\u0646\u0643 \u0623\u0646 \u062a\u0643\u062a\u0628 \u0644\u064a \u0648\u0635\u0641\u0629 \u0637\u0628\u064a\u0629\u061f", fa: "\u0645\u06cc\u200c\u062a\u0648\u0627\u0646\u06cc\u062f \u0628\u0631\u0627\u06cc\u0645 \u0646\u0633\u062e\u0647 \u0628\u0646\u0648\u06cc\u0633\u06cc\u062f\u061f", ru: "\u041d\u0435 \u043c\u043e\u0433\u043b\u0438 \u0431\u044b \u0432\u044b \u0432\u044b\u043f\u0438\u0441\u0430\u0442\u044c \u043c\u043d\u0435 \u0440\u0435\u0446\u0435\u043f\u0442?" }
-    }, {
-      id: 'a2_hastane_3_5',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Bug\u00fcn ____ eczane nerede?",
-      correctAnswers: ["n\u00f6bet\u00e7i"],
-      wordBank: ["n\u00f6bet\u00e7i", "a\u00e7\u0131k", "kapal\u0131"],
-      translation: { tr: "Bug\u00fcn n\u00f6bet\u00e7i eczane nerede?", en: "Where is the pharmacy on duty today?", ar: "\u0623\u064a\u0646 \u0635\u064a\u062f\u0644\u064a\u0629 \u0627\u0644\u0645\u0646\u0627\u0648\u0628\u0629 \u0627\u0644\u064a\u0648\u0645\u061f", fa: "\u062f\u0627\u0631\u0648\u062e\u0627\u0646\u0647 \u06a9\u0634\u06cc\u06a9 \u0627\u0645\u0631\u0648\u0632 \u06a9\u062c\u0627\u0633\u062a\u061f", ru: "\u0413\u0434\u0435 \u0441\u0435\u0433\u043e\u0434\u043d\u044f \u0434\u0435\u0436\u0443\u0440\u043d\u0430\u044f \u0430\u043f\u0442\u0435\u043a\u0430?" }
-    }] },{ id: 'a2_hastane_4', lessonNumber: 4, lessonType: 'rpg', title: { tr: "Diyalog 1", en: "Dialogue 1", ar: "\u062d\u0648\u0627\u0631 1", fa: "\u06af\u0641\u062a\u06af\u0648 1", ru: "\u0414\u0438\u0430\u043b\u043e\u0433 1" }, xpReward: 35, coinReward: 15, exercises: [{
-      id: 'a2_hastane_4_1',
-      type: 'rpg_dialogue',
-      scenario: { tr: "RPG Senaryosu", en: "RPG Scenario", ar: "\u0633\u064a\u0646\u0627\u0631\u064a\u0648 RPG", fa: "\u0633\u0646\u0627\u0631\u06cc\u0648 RPG", ru: "\u0421\u0446\u0435\u043d\u0430\u0440\u0438\u0439 RPG" },
-      scenarioEmoji: '🗣️',
-      startNodeId: 'n1',
-      nodes: [
-        {
-          nodeId: 'n1', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "Merhaba, size nas\u0131l yard\u0131mc\u0131 olabilirim?", en: "Hello, how can I help you?", ar: "\u0645\u0631\u062d\u0628\u0627\u060c \u0643\u064a\u0641 \u064a\u0645\u0643\u0646\u0646\u064a \u0645\u0633\u0627\u0639\u062f\u062a\u0643\u061f", fa: "\u0633\u0644\u0627\u0645\u060c \u0686\u0637\u0648\u0631 \u0645\u06cc\u200c\u062a\u0648\u0627\u0646\u0645 \u06a9\u0645\u06a9 \u06a9\u0646\u0645\u061f", ru: "\u0417\u0434\u0440\u0430\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435, \u0447\u0435\u043c \u043c\u043e\u0433\u0443 \u043f\u043e\u043c\u043e\u0447\u044c?" },
-          options: [
-            { id: 'o1', turkish: 'Evet, lütfen.', hint: { tr: "Yes, please.", en: "Yes, please.", ar: "\u0646\u0639\u0645 \u0645\u0646 \u0641\u0636\u0644\u0643.", fa: "\u0628\u0644\u0647 \u0644\u0637\u0641\u0627.", ru: "\u0414\u0430, \u043f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430." }, isCorrect: true, deductsHeart: false, responseTone: 'success', npcResponse: { tr: "Peki, i\u015fleminizi yap\u0131yorum.", en: "Okay, processing.", ar: "\u062d\u0633\u0646\u0627\u060c \u062c\u0627\u0631\u064a \u0627\u0644\u062a\u0646\u0641\u064a\u0630.", fa: "\u0628\u0627\u0634\u0647\u060c \u062f\u0631 \u062d\u0627\u0644 \u0627\u0646\u062c\u0627\u0645.", ru: "\u0425\u043e\u0440\u043e\u0448\u043e, \u0432\u044b\u043f\u043e\u043b\u043d\u044f\u044e." }, nextNodeId: 'end' }
-          ]
-        },
-        {
-          nodeId: 'end', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "\u0130yi g\u00fcnler.", en: "Have a good day.", ar: "\u064a\u0648\u0645 \u0633\u0639\u064a\u062f.", fa: "\u0631\u0648\u0632 \u0628\u062e\u06cc\u0631.", ru: "\u0425\u043e\u0440\u043e\u0448\u0435\u0433\u043e \u0434\u043d\u044f." },
-          options: [], isFinal: true
-        }
-      ]
-    }] },{ id: 'a2_hastane_5', lessonNumber: 5, lessonType: 'vocabulary', title: { tr: "Kelime: B\u00f6l\u00fcm 2", en: "Vocab 2", ar: "\u0645\u0641\u0631\u062f\u0627\u062a 2", fa: "\u0648\u0627\u0698\u06af\u0627\u0646 2", ru: "\u0421\u043b\u043e\u0432\u0430\u0440\u044c 2" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_hastane_5_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "ameliyat", translation: { tr: "ameliyat", en: "surgery", ar: "\u0639\u0645\u0644\u064a\u0629 \u062c\u0631\u0627\u062d\u064a\u0629", fa: "\u062c\u0631\u0627\u062d\u06cc", ru: "\u043e\u043f\u0435\u0440\u0430\u0446\u0438\u044f" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_hastane_5_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "tahlil", translation: { tr: "tahlil", en: "test", ar: "\u062a\u062d\u0644\u064a\u0644", fa: "\u0622\u0632\u0645\u0627\u06cc\u0634", ru: "\u0430\u043d\u0430\u043b\u0438\u0437" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_hastane_5_2',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "r\u00f6ntgen", translation: { tr: "r\u00f6ntgen", en: "x-ray", ar: "\u0623\u0634\u0639\u0629 \u0633\u064a\u0646\u064a\u0629", fa: "\u0627\u0634\u0639\u0647 \u0627\u06cc\u06a9\u0633", ru: "\u0440\u0435\u043d\u0442\u0433\u0435\u043d" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_hastane_5_3',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "acil", translation: { tr: "acil", en: "emergency", ar: "\u0637\u0648\u0627\u0631\u0626", fa: "\u0627\u0648\u0631\u0698\u0627\u0646\u0633", ru: "\u0441\u043a\u043e\u0440\u0430\u044f \u043f\u043e\u043c\u043e\u0449\u044c" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_hastane_5_4',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "n\u00f6bet\u00e7i", translation: { tr: "n\u00f6bet\u00e7i", en: "on duty", ar: "\u0645\u0646\u0627\u0648\u0628", fa: "\u06a9\u0634\u06cc\u06a9", ru: "\u0434\u0435\u0436\u0443\u0440\u043d\u044b\u0439" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }] },{ id: 'a2_hastane_6', lessonNumber: 6, lessonType: 'practice', title: { tr: "Pratik 2", en: "Practice 2", ar: "\u062a\u062f\u0631\u064a\u0628 2", fa: "\u062a\u0645\u0631\u06cc\u0646 2", ru: "\u041f\u0440\u0430\u043a\u0442\u0438\u043a\u0430 2" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_hastane_6_1',
-      type: 'drag_drop',
-      prompt: { tr: "E\u015fle\u015ftirin", en: "Match", ar: "\u062a\u0637\u0627\u0628\u0642", fa: "\u062a\u0637\u0627\u0628\u0642", ru: "\u0421\u043e\u043f\u043e\u0441\u0442\u0430\u0432\u044c\u0442\u0435" },
-      pairs: [{ id: 'p1', turkish: "ameliyat", translation: { tr: "surgery", en: "surgery", ar: "\u0639\u0645\u0644\u064a\u0629 \u062c\u0631\u0627\u062d\u064a\u0629", fa: "\u062c\u0631\u0627\u062d\u06cc", ru: "\u043e\u043f\u0435\u0440\u0430\u0446\u0438\u044f" } }, { id: 'p2', turkish: "tahlil", translation: { tr: "test", en: "test", ar: "\u062a\u062d\u0644\u064a\u0644", fa: "\u0622\u0632\u0645\u0627\u06cc\u0634", ru: "\u0430\u043d\u0430\u043b\u0438\u0437" } }, { id: 'p3', turkish: "r\u00f6ntgen", translation: { tr: "x-ray", en: "x-ray", ar: "\u0623\u0634\u0639\u0629 \u0633\u064a\u0646\u064a\u0629", fa: "\u0627\u0634\u0639\u0647 \u0627\u06cc\u06a9\u0633", ru: "\u0440\u0435\u043d\u0442\u0433\u0435\u043d" } }, { id: 'p4', turkish: "acil", translation: { tr: "emergency", en: "emergency", ar: "\u0637\u0648\u0627\u0631\u0626", fa: "\u0627\u0648\u0631\u0698\u0627\u0646\u0633", ru: "\u0441\u043a\u043e\u0440\u0430\u044f \u043f\u043e\u043c\u043e\u0449\u044c" } }, { id: 'p5', turkish: "n\u00f6bet\u00e7i", translation: { tr: "on duty", en: "on duty", ar: "\u0645\u0646\u0627\u0648\u0628", fa: "\u06a9\u0634\u06cc\u06a9", ru: "\u0434\u0435\u0436\u0443\u0440\u043d\u044b\u0439" } }]
-    }] },{ id: 'a2_hastane_7', lessonNumber: 7, lessonType: 'sentence_building', title: { tr: "C\u00fcmle Kurma 2", en: "Sentences 2", ar: "\u062c\u0645\u0644 2", fa: "\u062c\u0645\u0644\u0627\u062a 2", ru: "\u041f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u044f 2" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_hastane_7_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["hastay\u0131m", "\u00c7ok"],
-      correctOrder: ["\u00c7ok", "hastay\u0131m"],
-      translation: { tr: "\u00c7ok hastay\u0131m.", en: "I am very sick.", ar: "\u0623\u0646\u0627 \u0645\u0631\u064a\u0636 \u062c\u062f\u0627.", fa: "\u0645\u0646 \u062e\u06cc\u0644\u06cc \u0628\u06cc\u0645\u0627\u0631 \u0647\u0633\u062a\u0645.", ru: "\u042f \u043e\u0447\u0435\u043d\u044c \u0431\u043e\u043b\u0435\u043d." }
-    }, {
-      id: 'a2_hastane_7_2',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["a\u011fr\u0131yor", "Ba\u015f\u0131m"],
-      correctOrder: ["Ba\u015f\u0131m", "a\u011fr\u0131yor"],
-      translation: { tr: "Ba\u015f\u0131m a\u011fr\u0131yor.", en: "My head hurts.", ar: "\u0631\u0623\u0633\u064a \u064a\u0624\u0644\u0645\u0646\u064a.", fa: "\u0633\u0631\u0645 \u062f\u0631\u062f \u0645\u06cc\u200c\u06a9\u0646\u062f.", ru: "\u0423 \u043c\u0435\u043d\u044f \u0431\u043e\u043b\u0438\u0442 \u0433\u043e\u043b\u043e\u0432\u0430." }
-    }, {
-      id: 'a2_hastane_7_3',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["alaca\u011f\u0131m", "\u0130la\u00e7"],
-      correctOrder: ["\u0130la\u00e7", "alaca\u011f\u0131m"],
-      translation: { tr: "\u0130la\u00e7 alaca\u011f\u0131m.", en: "I will buy medicine.", ar: "\u0633\u0623\u0634\u062a\u0631\u064a \u062f\u0648\u0627\u0621.", fa: "\u062f\u0627\u0631\u0648 \u062e\u0648\u0627\u0647\u0645 \u062e\u0631\u06cc\u062f.", ru: "\u042f \u043a\u0443\u043f\u043b\u044e \u043b\u0435\u043a\u0430\u0440\u0441\u0442\u0432\u043e." }
-    }, {
-      id: 'a2_hastane_7_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Bana bir ____ yazar m\u0131s\u0131n\u0131z?",
-      correctAnswers: ["re\u00e7ete"],
-      wordBank: ["re\u00e7ete", "kitap", "mektup"],
-      translation: { tr: "Bana bir re\u00e7ete yazar m\u0131s\u0131n\u0131z?", en: "Can you write me a prescription?", ar: "\u0647\u0644 \u064a\u0645\u0643\u0646\u0643 \u0623\u0646 \u062a\u0643\u062a\u0628 \u0644\u064a \u0648\u0635\u0641\u0629 \u0637\u0628\u064a\u0629\u061f", fa: "\u0645\u06cc\u200c\u062a\u0648\u0627\u0646\u06cc\u062f \u0628\u0631\u0627\u06cc\u0645 \u0646\u0633\u062e\u0647 \u0628\u0646\u0648\u06cc\u0633\u06cc\u062f\u061f", ru: "\u041d\u0435 \u043c\u043e\u0433\u043b\u0438 \u0431\u044b \u0432\u044b \u0432\u044b\u043f\u0438\u0441\u0430\u0442\u044c \u043c\u043d\u0435 \u0440\u0435\u0446\u0435\u043f\u0442?" }
-    }, {
-      id: 'a2_hastane_7_5',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Bug\u00fcn ____ eczane nerede?",
-      correctAnswers: ["n\u00f6bet\u00e7i"],
-      wordBank: ["n\u00f6bet\u00e7i", "a\u00e7\u0131k", "kapal\u0131"],
-      translation: { tr: "Bug\u00fcn n\u00f6bet\u00e7i eczane nerede?", en: "Where is the pharmacy on duty today?", ar: "\u0623\u064a\u0646 \u0635\u064a\u062f\u0644\u064a\u0629 \u0627\u0644\u0645\u0646\u0627\u0648\u0628\u0629 \u0627\u0644\u064a\u0648\u0645\u061f", fa: "\u062f\u0627\u0631\u0648\u062e\u0627\u0646\u0647 \u06a9\u0634\u06cc\u06a9 \u0627\u0645\u0631\u0648\u0632 \u06a9\u062c\u0627\u0633\u062a\u061f", ru: "\u0413\u0434\u0435 \u0441\u0435\u0433\u043e\u0434\u043d\u044f \u0434\u0435\u0436\u0443\u0440\u043d\u0430\u044f \u0430\u043f\u0442\u0435\u043a\u0430?" }
-    }] },{ id: 'a2_hastane_8', lessonNumber: 8, lessonType: 'rpg', title: { tr: "Diyalog 2", en: "Dialogue 2", ar: "\u062d\u0648\u0627\u0631 2", fa: "\u06af\u0641\u062a\u06af\u0648 2", ru: "\u0414\u0438\u0430\u043b\u043e\u0433 2" }, xpReward: 35, coinReward: 15, exercises: [{
-      id: 'a2_hastane_8_1',
-      type: 'rpg_dialogue',
-      scenario: { tr: "RPG Senaryosu 2", en: "RPG Scenario 2", ar: "\u0633\u064a\u0646\u0627\u0631\u064a\u0648 RPG 2", fa: "\u0633\u0646\u0627\u0631\u06cc\u0648 RPG 2", ru: "\u0421\u0446\u0435\u043d\u0430\u0440\u0438\u0439 RPG 2" },
-      scenarioEmoji: '🗣️',
-      startNodeId: 'n1',
-      nodes: [
-        {
-          nodeId: 'n1', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "Merhaba, size nas\u0131l yard\u0131mc\u0131 olabilirim?", en: "Hello, how can I help you?", ar: "\u0645\u0631\u062d\u0628\u0627\u060c \u0643\u064a\u0641 \u064a\u0645\u0643\u0646\u0646\u064a \u0645\u0633\u0627\u0639\u062f\u062a\u0643\u061f", fa: "\u0633\u0644\u0627\u0645\u060c \u0686\u0637\u0648\u0631 \u0645\u06cc\u200c\u062a\u0648\u0627\u0646\u0645 \u06a9\u0645\u06a9 \u06a9\u0646\u0645\u061f", ru: "\u0417\u0434\u0440\u0430\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435, \u0447\u0435\u043c \u043c\u043e\u0433\u0443 \u043f\u043e\u043c\u043e\u0447\u044c?" },
-          options: [
-            { id: 'o1', turkish: 'Evet, lütfen.', hint: { tr: "Yes, please.", en: "Yes, please.", ar: "\u0646\u0639\u0645 \u0645\u0646 \u0641\u0636\u0644\u0643.", fa: "\u0628\u0644\u0647 \u0644\u0637\u0641\u0627.", ru: "\u0414\u0430, \u043f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430." }, isCorrect: true, deductsHeart: false, responseTone: 'success', npcResponse: { tr: "Peki, i\u015fleminizi yap\u0131yorum.", en: "Okay, processing.", ar: "\u062d\u0633\u0646\u0627\u060c \u062c\u0627\u0631\u064a \u0627\u0644\u062a\u0646\u0641\u064a\u0630.", fa: "\u0628\u0627\u0634\u0647\u060c \u062f\u0631 \u062d\u0627\u0644 \u0627\u0646\u062c\u0627\u0645.", ru: "\u0425\u043e\u0440\u043e\u0448\u043e, \u0432\u044b\u043f\u043e\u043b\u043d\u044f\u044e." }, nextNodeId: 'end' }
-          ]
-        },
-        {
-          nodeId: 'end', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "\u0130yi g\u00fcnler.", en: "Have a good day.", ar: "\u064a\u0648\u0645 \u0633\u0639\u064a\u062f.", fa: "\u0631\u0648\u0632 \u0628\u062e\u06cc\u0631.", ru: "\u0425\u043e\u0440\u043e\u0448\u0435\u0433\u043e \u0434\u043d\u044f." },
-          options: [], isFinal: true
-        }
-      ]
-    }] },{ id: 'a2_hastane_9', lessonNumber: 9, lessonType: 'boss_fight', title: { tr: "Patron Sava\u015f\u0131", en: "Boss Fight", ar: "\u0645\u0639\u0631\u0643\u0629 \u0627\u0644\u0632\u0639\u064a\u0645", fa: "\u0645\u0628\u0627\u0631\u0632\u0647 \u0628\u0627 \u0631\u0626\u06cc\u0633", ru: "\u0411\u043e\u0441\u0441 \u0431\u043e\u0439" }, xpReward: 70, coinReward: 35, exercises: [{
-      id: 'a2_hastane_1_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "doktor", translation: { tr: "doktor", en: "doctor", ar: "\u0637\u0628\u064a\u0628", fa: "\u062f\u06a9\u062a\u0631", ru: "\u0432\u0440\u0430\u0447" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_hastane_1_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "hasta", translation: { tr: "hasta", en: "patient", ar: "\u0645\u0631\u064a\u0636", fa: "\u0628\u06cc\u0645\u0627\u0631", ru: "\u043f\u0430\u0446\u0438\u0435\u043d\u0442" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_hastane_5_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "ameliyat", translation: { tr: "ameliyat", en: "surgery", ar: "\u0639\u0645\u0644\u064a\u0629 \u062c\u0631\u0627\u062d\u064a\u0629", fa: "\u062c\u0631\u0627\u062d\u06cc", ru: "\u043e\u043f\u0435\u0440\u0430\u0446\u0438\u044f" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_hastane_5_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "tahlil", translation: { tr: "tahlil", en: "test", ar: "\u062a\u062d\u0644\u064a\u0644", fa: "\u0622\u0632\u0645\u0627\u06cc\u0634", ru: "\u0430\u043d\u0430\u043b\u0438\u0437" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_hastane_3_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["hastay\u0131m", "\u00c7ok"],
-      correctOrder: ["\u00c7ok", "hastay\u0131m"],
-      translation: { tr: "\u00c7ok hastay\u0131m.", en: "I am very sick.", ar: "\u0623\u0646\u0627 \u0645\u0631\u064a\u0636 \u062c\u062f\u0627.", fa: "\u0645\u0646 \u062e\u06cc\u0644\u06cc \u0628\u06cc\u0645\u0627\u0631 \u0647\u0633\u062a\u0645.", ru: "\u042f \u043e\u0447\u0435\u043d\u044c \u0431\u043e\u043b\u0435\u043d." }
-    }, {
-      id: 'a2_hastane_7_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["hastay\u0131m", "\u00c7ok"],
-      correctOrder: ["\u00c7ok", "hastay\u0131m"],
-      translation: { tr: "\u00c7ok hastay\u0131m.", en: "I am very sick.", ar: "\u0623\u0646\u0627 \u0645\u0631\u064a\u0636 \u062c\u062f\u0627.", fa: "\u0645\u0646 \u062e\u06cc\u0644\u06cc \u0628\u06cc\u0645\u0627\u0631 \u0647\u0633\u062a\u0645.", ru: "\u042f \u043e\u0447\u0435\u043d\u044c \u0431\u043e\u043b\u0435\u043d." }
-    }, {
-      id: 'a2_hastane_3_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Bana bir ____ yazar m\u0131s\u0131n\u0131z?",
-      correctAnswers: ["re\u00e7ete"],
-      wordBank: ["re\u00e7ete", "kitap", "mektup"],
-      translation: { tr: "Bana bir re\u00e7ete yazar m\u0131s\u0131n\u0131z?", en: "Can you write me a prescription?", ar: "\u0647\u0644 \u064a\u0645\u0643\u0646\u0643 \u0623\u0646 \u062a\u0643\u062a\u0628 \u0644\u064a \u0648\u0635\u0641\u0629 \u0637\u0628\u064a\u0629\u061f", fa: "\u0645\u06cc\u200c\u062a\u0648\u0627\u0646\u06cc\u062f \u0628\u0631\u0627\u06cc\u0645 \u0646\u0633\u062e\u0647 \u0628\u0646\u0648\u06cc\u0633\u06cc\u062f\u061f", ru: "\u041d\u0435 \u043c\u043e\u0433\u043b\u0438 \u0431\u044b \u0432\u044b \u0432\u044b\u043f\u0438\u0441\u0430\u0442\u044c \u043c\u043d\u0435 \u0440\u0435\u0446\u0435\u043f\u0442?" }
-    }, {
-      id: 'a2_hastane_7_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Bana bir ____ yazar m\u0131s\u0131n\u0131z?",
-      correctAnswers: ["re\u00e7ete"],
-      wordBank: ["re\u00e7ete", "kitap", "mektup"],
-      translation: { tr: "Bana bir re\u00e7ete yazar m\u0131s\u0131n\u0131z?", en: "Can you write me a prescription?", ar: "\u0647\u0644 \u064a\u0645\u0643\u0646\u0643 \u0623\u0646 \u062a\u0643\u062a\u0628 \u0644\u064a \u0648\u0635\u0641\u0629 \u0637\u0628\u064a\u0629\u061f", fa: "\u0645\u06cc\u200c\u062a\u0648\u0627\u0646\u06cc\u062f \u0628\u0631\u0627\u06cc\u0645 \u0646\u0633\u062e\u0647 \u0628\u0646\u0648\u06cc\u0633\u06cc\u062f\u061f", ru: "\u041d\u0435 \u043c\u043e\u0433\u043b\u0438 \u0431\u044b \u0432\u044b \u0432\u044b\u043f\u0438\u0441\u0430\u0442\u044c \u043c\u043d\u0435 \u0440\u0435\u0446\u0435\u043f\u0442?" }
-    }] }] },{ id: 'a2_ptt', unitNumber: 4, name: { tr: "Posta", en: "Post", ar: "\u0628\u0631\u064a\u062f", fa: "\u067e\u0633\u062a", ru: "\u041f\u043e\u0447\u0442\u0430" }, emoji: '📮', color: 'from-yellow-500 to-amber-600', lessons: [{ id: 'a2_ptt_1', lessonNumber: 1, lessonType: 'vocabulary', title: { tr: "Kelime: B\u00f6l\u00fcm 1", en: "Vocab 1", ar: "\u0645\u0641\u0631\u062f\u0627\u062a 1", fa: "\u0648\u0627\u0698\u06af\u0627\u0646 1", ru: "\u0421\u043b\u043e\u0432\u0430\u0440\u044c 1" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_ptt_1_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "kargo", translation: { tr: "kargo", en: "cargo", ar: "\u0628\u0631\u064a\u062f", fa: "\u067e\u0633\u062a", ru: "\u043f\u043e\u0447\u0442\u0430" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_ptt_1_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "paket", translation: { tr: "paket", en: "package", ar: "\u0637\u0631\u062f", fa: "\u0628\u0633\u062a\u0647", ru: "\u043f\u043e\u0441\u044b\u043b\u043a\u0430" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_ptt_1_2',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "g\u00f6nderici", translation: { tr: "g\u00f6nderici", en: "sender", ar: "\u0645\u0631\u0633\u0644", fa: "\u0641\u0631\u0633\u062a\u0646\u062f\u0647", ru: "\u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u0435\u043b\u044c" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_ptt_1_3',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "al\u0131c\u0131", translation: { tr: "al\u0131c\u0131", en: "receiver", ar: "\u0645\u0633\u062a\u0644\u0645", fa: "\u06af\u06cc\u0631\u0646\u062f\u0647", ru: "\u043f\u043e\u043b\u0443\u0447\u0430\u0442\u0435\u043b\u044c" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_ptt_1_4',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "fatura", translation: { tr: "fatura", en: "bill", ar: "\u0641\u0627\u062a\u0648\u0631\u0629", fa: "\u0642\u0628\u0636", ru: "\u0441\u0447\u0435\u0442" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }] },{ id: 'a2_ptt_2', lessonNumber: 2, lessonType: 'practice', title: { tr: "Pratik 1", en: "Practice 1", ar: "\u062a\u062f\u0631\u064a\u0628 1", fa: "\u062a\u0645\u0631\u06cc\u0646 1", ru: "\u041f\u0440\u0430\u043a\u0442\u0438\u043a\u0430 1" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_ptt_2_1',
-      type: 'drag_drop',
-      prompt: { tr: "E\u015fle\u015ftirin", en: "Match", ar: "\u062a\u0637\u0627\u0628\u0642", fa: "\u062a\u0637\u0627\u0628\u0642", ru: "\u0421\u043e\u043f\u043e\u0441\u0442\u0430\u0432\u044c\u0442\u0435" },
-      pairs: [{ id: 'p1', turkish: "kargo", translation: { tr: "cargo", en: "cargo", ar: "\u0628\u0631\u064a\u062f", fa: "\u067e\u0633\u062a", ru: "\u043f\u043e\u0447\u0442\u0430" } }, { id: 'p2', turkish: "paket", translation: { tr: "package", en: "package", ar: "\u0637\u0631\u062f", fa: "\u0628\u0633\u062a\u0647", ru: "\u043f\u043e\u0441\u044b\u043b\u043a\u0430" } }, { id: 'p3', turkish: "g\u00f6nderici", translation: { tr: "sender", en: "sender", ar: "\u0645\u0631\u0633\u0644", fa: "\u0641\u0631\u0633\u062a\u0646\u062f\u0647", ru: "\u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u0435\u043b\u044c" } }, { id: 'p4', turkish: "al\u0131c\u0131", translation: { tr: "receiver", en: "receiver", ar: "\u0645\u0633\u062a\u0644\u0645", fa: "\u06af\u06cc\u0631\u0646\u062f\u0647", ru: "\u043f\u043e\u043b\u0443\u0447\u0430\u0442\u0435\u043b\u044c" } }, { id: 'p5', turkish: "fatura", translation: { tr: "bill", en: "bill", ar: "\u0641\u0627\u062a\u0648\u0631\u0629", fa: "\u0642\u0628\u0636", ru: "\u0441\u0447\u0435\u0442" } }]
-    }] },{ id: 'a2_ptt_3', lessonNumber: 3, lessonType: 'sentence_building', title: { tr: "C\u00fcmle Kurma 1", en: "Sentences 1", ar: "\u062c\u0645\u0644 1", fa: "\u062c\u0645\u0644\u0627\u062a 1", ru: "\u041f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u044f 1" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_ptt_3_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["g\u00f6nderece\u011fim", "Paket"],
-      correctOrder: ["Paket", "g\u00f6nderece\u011fim"],
-      translation: { tr: "Paket g\u00f6nderece\u011fim.", en: "I will send a package.", ar: "\u0633\u0623\u0631\u0633\u0644 \u0637\u0631\u062f\u0627.", fa: "\u0628\u0633\u062a\u0647 \u0645\u06cc\u200c\u0641\u0631\u0633\u062a\u0645.", ru: "\u042f \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u044e \u043f\u043e\u0441\u044b\u043b\u043a\u0443." }
-    }, {
-      id: 'a2_ptt_3_2',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["\u00f6deyece\u011fim", "Fatura"],
-      correctOrder: ["Fatura", "\u00f6deyece\u011fim"],
-      translation: { tr: "Fatura \u00f6deyece\u011fim.", en: "I will pay a bill.", ar: "\u0633\u0623\u062f\u0641\u0639 \u0641\u0627\u062a\u0648\u0631\u0629.", fa: "\u0642\u0628\u0636 \u067e\u0631\u062f\u0627\u062e\u062a \u0645\u06cc\u200c\u06a9\u0646\u0645.", ru: "\u042f \u043e\u043f\u043b\u0430\u0447\u0443 \u0441\u0447\u0435\u0442." }
-    }, {
-      id: 'a2_ptt_3_3',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["kesildi", "Elektrik"],
-      correctOrder: ["Elektrik", "kesildi"],
-      translation: { tr: "Elektrik kesildi.", en: "Electricity is cut.", ar: "\u0627\u0646\u0642\u0637\u0639\u062a \u0627\u0644\u0643\u0647\u0631\u0628\u0627\u0621.", fa: "\u0628\u0631\u0642 \u0642\u0637\u0639 \u0634\u062f.", ru: "\u041e\u0442\u043a\u043b\u044e\u0447\u0438\u043b\u0438 \u044d\u043b\u0435\u043a\u0442\u0440\u0438\u0447\u0435\u0441\u0442\u0432\u043e." }
-    }, {
-      id: 'a2_ptt_3_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Bu ____ yurt d\u0131\u015f\u0131na gidecek.",
-      correctAnswers: ["paketi"],
-      wordBank: ["paketi", "kargosu", "faturas\u0131"],
-      translation: { tr: "Bu paketi yurt d\u0131\u015f\u0131na gidecek.", en: "This package will go abroad.", ar: "\u0647\u0630\u0627 \u0627\u0644\u0637\u0631\u062f \u0633\u064a\u0630\u0647\u0628 \u0625\u0644\u0649 \u0627\u0644\u062e\u0627\u0631\u062c.", fa: "\u0627\u06cc\u0646 \u0628\u0633\u062a\u0647 \u0628\u0647 \u062e\u0627\u0631\u062c \u0627\u0632 \u06a9\u0634\u0648\u0631 \u0645\u06cc\u200c\u0631\u0648\u062f.", ru: "\u042d\u0442\u0430 \u043f\u043e\u0441\u044b\u043b\u043a\u0430 \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u0441\u044f \u0437\u0430 \u0433\u0440\u0430\u043d\u0438\u0446\u0443." }
-    }, {
-      id: 'a2_ptt_3_5',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Otomatik ____ talimat\u0131 verdim.",
-      correctAnswers: ["\u00f6deme"],
-      wordBank: ["\u00f6deme", "alma", "verme"],
-      translation: { tr: "Otomatik \u00f6deme talimat\u0131 verdim.", en: "I gave auto-pay instruction.", ar: "\u0623\u0639\u0637\u064a\u062a \u062a\u0639\u0644\u064a\u0645\u0627\u062a \u0627\u0644\u062f\u0641\u0639 \u0627\u0644\u062a\u0644\u0642\u0627\u0626\u064a.", fa: "\u062f\u0633\u062a\u0648\u0631 \u067e\u0631\u062f\u0627\u062e\u062a \u062e\u0648\u062f\u06a9\u0627\u0631 \u062f\u0627\u062f\u0645.", ru: "\u042f \u0434\u0430\u043b \u043f\u043e\u0440\u0443\u0447\u0435\u043d\u0438\u0435 \u043d\u0430 \u0430\u0432\u0442\u043e\u043f\u043b\u0430\u0442\u0435\u0436." }
-    }] },{ id: 'a2_ptt_4', lessonNumber: 4, lessonType: 'rpg', title: { tr: "Diyalog 1", en: "Dialogue 1", ar: "\u062d\u0648\u0627\u0631 1", fa: "\u06af\u0641\u062a\u06af\u0648 1", ru: "\u0414\u0438\u0430\u043b\u043e\u0433 1" }, xpReward: 35, coinReward: 15, exercises: [{
-      id: 'a2_ptt_4_1',
-      type: 'rpg_dialogue',
-      scenario: { tr: "RPG Senaryosu", en: "RPG Scenario", ar: "\u0633\u064a\u0646\u0627\u0631\u064a\u0648 RPG", fa: "\u0633\u0646\u0627\u0631\u06cc\u0648 RPG", ru: "\u0421\u0446\u0435\u043d\u0430\u0440\u0438\u0439 RPG" },
-      scenarioEmoji: '🗣️',
-      startNodeId: 'n1',
-      nodes: [
-        {
-          nodeId: 'n1', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "Merhaba, size nas\u0131l yard\u0131mc\u0131 olabilirim?", en: "Hello, how can I help you?", ar: "\u0645\u0631\u062d\u0628\u0627\u060c \u0643\u064a\u0641 \u064a\u0645\u0643\u0646\u0646\u064a \u0645\u0633\u0627\u0639\u062f\u062a\u0643\u061f", fa: "\u0633\u0644\u0627\u0645\u060c \u0686\u0637\u0648\u0631 \u0645\u06cc\u200c\u062a\u0648\u0627\u0646\u0645 \u06a9\u0645\u06a9 \u06a9\u0646\u0645\u061f", ru: "\u0417\u0434\u0440\u0430\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435, \u0447\u0435\u043c \u043c\u043e\u0433\u0443 \u043f\u043e\u043c\u043e\u0447\u044c?" },
-          options: [
-            { id: 'o1', turkish: 'Evet, lütfen.', hint: { tr: "Yes, please.", en: "Yes, please.", ar: "\u0646\u0639\u0645 \u0645\u0646 \u0641\u0636\u0644\u0643.", fa: "\u0628\u0644\u0647 \u0644\u0637\u0641\u0627.", ru: "\u0414\u0430, \u043f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430." }, isCorrect: true, deductsHeart: false, responseTone: 'success', npcResponse: { tr: "Peki, i\u015fleminizi yap\u0131yorum.", en: "Okay, processing.", ar: "\u062d\u0633\u0646\u0627\u060c \u062c\u0627\u0631\u064a \u0627\u0644\u062a\u0646\u0641\u064a\u0630.", fa: "\u0628\u0627\u0634\u0647\u060c \u062f\u0631 \u062d\u0627\u0644 \u0627\u0646\u062c\u0627\u0645.", ru: "\u0425\u043e\u0440\u043e\u0448\u043e, \u0432\u044b\u043f\u043e\u043b\u043d\u044f\u044e." }, nextNodeId: 'end' }
-          ]
-        },
-        {
-          nodeId: 'end', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "\u0130yi g\u00fcnler.", en: "Have a good day.", ar: "\u064a\u0648\u0645 \u0633\u0639\u064a\u062f.", fa: "\u0631\u0648\u0632 \u0628\u062e\u06cc\u0631.", ru: "\u0425\u043e\u0440\u043e\u0448\u0435\u0433\u043e \u0434\u043d\u044f." },
-          options: [], isFinal: true
-        }
-      ]
-    }] },{ id: 'a2_ptt_5', lessonNumber: 5, lessonType: 'vocabulary', title: { tr: "Kelime: B\u00f6l\u00fcm 2", en: "Vocab 2", ar: "\u0645\u0641\u0631\u062f\u0627\u062a 2", fa: "\u0648\u0627\u0698\u06af\u0627\u0646 2", ru: "\u0421\u043b\u043e\u0432\u0430\u0440\u044c 2" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_ptt_5_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "elektrik", translation: { tr: "elektrik", en: "electricity", ar: "\u0643\u0647\u0631\u0628\u0627\u0621", fa: "\u0628\u0631\u0642", ru: "\u044d\u043b\u0435\u043a\u0442\u0440\u0438\u0447\u0435\u0441\u0442\u0432\u043e" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_ptt_5_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "su", translation: { tr: "su", en: "water", ar: "\u0645\u0627\u0621", fa: "\u0622\u0628", ru: "\u0432\u043e\u0434\u0430" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_ptt_5_2',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "do\u011falgaz", translation: { tr: "do\u011falgaz", en: "gas", ar: "\u063a\u0627\u0632", fa: "\u06af\u0627\u0632", ru: "\u0433\u0430\u0437" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_ptt_5_3',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "abonelik", translation: { tr: "abonelik", en: "subscription", ar: "\u0627\u0634\u062a\u0631\u0627\u0643", fa: "\u0627\u0634\u062a\u0631\u0627\u06a9", ru: "\u043f\u043e\u0434\u043f\u0438\u0441\u043a\u0430" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_ptt_5_4',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "iptal", translation: { tr: "iptal", en: "cancellation", ar: "\u0625\u0644\u063a\u0627\u0621", fa: "\u0644\u063a\u0648", ru: "\u043e\u0442\u043c\u0435\u043d\u0430" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }] },{ id: 'a2_ptt_6', lessonNumber: 6, lessonType: 'practice', title: { tr: "Pratik 2", en: "Practice 2", ar: "\u062a\u062f\u0631\u064a\u0628 2", fa: "\u062a\u0645\u0631\u06cc\u0646 2", ru: "\u041f\u0440\u0430\u043a\u0442\u0438\u043a\u0430 2" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_ptt_6_1',
-      type: 'drag_drop',
-      prompt: { tr: "E\u015fle\u015ftirin", en: "Match", ar: "\u062a\u0637\u0627\u0628\u0642", fa: "\u062a\u0637\u0627\u0628\u0642", ru: "\u0421\u043e\u043f\u043e\u0441\u0442\u0430\u0432\u044c\u0442\u0435" },
-      pairs: [{ id: 'p1', turkish: "elektrik", translation: { tr: "electricity", en: "electricity", ar: "\u0643\u0647\u0631\u0628\u0627\u0621", fa: "\u0628\u0631\u0642", ru: "\u044d\u043b\u0435\u043a\u0442\u0440\u0438\u0447\u0435\u0441\u0442\u0432\u043e" } }, { id: 'p2', turkish: "su", translation: { tr: "water", en: "water", ar: "\u0645\u0627\u0621", fa: "\u0622\u0628", ru: "\u0432\u043e\u0434\u0430" } }, { id: 'p3', turkish: "do\u011falgaz", translation: { tr: "gas", en: "gas", ar: "\u063a\u0627\u0632", fa: "\u06af\u0627\u0632", ru: "\u0433\u0430\u0437" } }, { id: 'p4', turkish: "abonelik", translation: { tr: "subscription", en: "subscription", ar: "\u0627\u0634\u062a\u0631\u0627\u0643", fa: "\u0627\u0634\u062a\u0631\u0627\u06a9", ru: "\u043f\u043e\u0434\u043f\u0438\u0441\u043a\u0430" } }, { id: 'p5', turkish: "iptal", translation: { tr: "cancellation", en: "cancellation", ar: "\u0625\u0644\u063a\u0627\u0621", fa: "\u0644\u063a\u0648", ru: "\u043e\u0442\u043c\u0435\u043d\u0430" } }]
-    }] },{ id: 'a2_ptt_7', lessonNumber: 7, lessonType: 'sentence_building', title: { tr: "C\u00fcmle Kurma 2", en: "Sentences 2", ar: "\u062c\u0645\u0644 2", fa: "\u062c\u0645\u0644\u0627\u062a 2", ru: "\u041f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u044f 2" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_ptt_7_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["g\u00f6nderece\u011fim", "Paket"],
-      correctOrder: ["Paket", "g\u00f6nderece\u011fim"],
-      translation: { tr: "Paket g\u00f6nderece\u011fim.", en: "I will send a package.", ar: "\u0633\u0623\u0631\u0633\u0644 \u0637\u0631\u062f\u0627.", fa: "\u0628\u0633\u062a\u0647 \u0645\u06cc\u200c\u0641\u0631\u0633\u062a\u0645.", ru: "\u042f \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u044e \u043f\u043e\u0441\u044b\u043b\u043a\u0443." }
-    }, {
-      id: 'a2_ptt_7_2',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["\u00f6deyece\u011fim", "Fatura"],
-      correctOrder: ["Fatura", "\u00f6deyece\u011fim"],
-      translation: { tr: "Fatura \u00f6deyece\u011fim.", en: "I will pay a bill.", ar: "\u0633\u0623\u062f\u0641\u0639 \u0641\u0627\u062a\u0648\u0631\u0629.", fa: "\u0642\u0628\u0636 \u067e\u0631\u062f\u0627\u062e\u062a \u0645\u06cc\u200c\u06a9\u0646\u0645.", ru: "\u042f \u043e\u043f\u043b\u0430\u0447\u0443 \u0441\u0447\u0435\u0442." }
-    }, {
-      id: 'a2_ptt_7_3',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["kesildi", "Elektrik"],
-      correctOrder: ["Elektrik", "kesildi"],
-      translation: { tr: "Elektrik kesildi.", en: "Electricity is cut.", ar: "\u0627\u0646\u0642\u0637\u0639\u062a \u0627\u0644\u0643\u0647\u0631\u0628\u0627\u0621.", fa: "\u0628\u0631\u0642 \u0642\u0637\u0639 \u0634\u062f.", ru: "\u041e\u0442\u043a\u043b\u044e\u0447\u0438\u043b\u0438 \u044d\u043b\u0435\u043a\u0442\u0440\u0438\u0447\u0435\u0441\u0442\u0432\u043e." }
-    }, {
-      id: 'a2_ptt_7_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Bu ____ yurt d\u0131\u015f\u0131na gidecek.",
-      correctAnswers: ["paketi"],
-      wordBank: ["paketi", "kargosu", "faturas\u0131"],
-      translation: { tr: "Bu paketi yurt d\u0131\u015f\u0131na gidecek.", en: "This package will go abroad.", ar: "\u0647\u0630\u0627 \u0627\u0644\u0637\u0631\u062f \u0633\u064a\u0630\u0647\u0628 \u0625\u0644\u0649 \u0627\u0644\u062e\u0627\u0631\u062c.", fa: "\u0627\u06cc\u0646 \u0628\u0633\u062a\u0647 \u0628\u0647 \u062e\u0627\u0631\u062c \u0627\u0632 \u06a9\u0634\u0648\u0631 \u0645\u06cc\u200c\u0631\u0648\u062f.", ru: "\u042d\u0442\u0430 \u043f\u043e\u0441\u044b\u043b\u043a\u0430 \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u0441\u044f \u0437\u0430 \u0433\u0440\u0430\u043d\u0438\u0446\u0443." }
-    }, {
-      id: 'a2_ptt_7_5',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Otomatik ____ talimat\u0131 verdim.",
-      correctAnswers: ["\u00f6deme"],
-      wordBank: ["\u00f6deme", "alma", "verme"],
-      translation: { tr: "Otomatik \u00f6deme talimat\u0131 verdim.", en: "I gave auto-pay instruction.", ar: "\u0623\u0639\u0637\u064a\u062a \u062a\u0639\u0644\u064a\u0645\u0627\u062a \u0627\u0644\u062f\u0641\u0639 \u0627\u0644\u062a\u0644\u0642\u0627\u0626\u064a.", fa: "\u062f\u0633\u062a\u0648\u0631 \u067e\u0631\u062f\u0627\u062e\u062a \u062e\u0648\u062f\u06a9\u0627\u0631 \u062f\u0627\u062f\u0645.", ru: "\u042f \u0434\u0430\u043b \u043f\u043e\u0440\u0443\u0447\u0435\u043d\u0438\u0435 \u043d\u0430 \u0430\u0432\u0442\u043e\u043f\u043b\u0430\u0442\u0435\u0436." }
-    }] },{ id: 'a2_ptt_8', lessonNumber: 8, lessonType: 'rpg', title: { tr: "Diyalog 2", en: "Dialogue 2", ar: "\u062d\u0648\u0627\u0631 2", fa: "\u06af\u0641\u062a\u06af\u0648 2", ru: "\u0414\u0438\u0430\u043b\u043e\u0433 2" }, xpReward: 35, coinReward: 15, exercises: [{
-      id: 'a2_ptt_8_1',
-      type: 'rpg_dialogue',
-      scenario: { tr: "RPG Senaryosu 2", en: "RPG Scenario 2", ar: "\u0633\u064a\u0646\u0627\u0631\u064a\u0648 RPG 2", fa: "\u0633\u0646\u0627\u0631\u06cc\u0648 RPG 2", ru: "\u0421\u0446\u0435\u043d\u0430\u0440\u0438\u0439 RPG 2" },
-      scenarioEmoji: '🗣️',
-      startNodeId: 'n1',
-      nodes: [
-        {
-          nodeId: 'n1', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "Merhaba, size nas\u0131l yard\u0131mc\u0131 olabilirim?", en: "Hello, how can I help you?", ar: "\u0645\u0631\u062d\u0628\u0627\u060c \u0643\u064a\u0641 \u064a\u0645\u0643\u0646\u0646\u064a \u0645\u0633\u0627\u0639\u062f\u062a\u0643\u061f", fa: "\u0633\u0644\u0627\u0645\u060c \u0686\u0637\u0648\u0631 \u0645\u06cc\u200c\u062a\u0648\u0627\u0646\u0645 \u06a9\u0645\u06a9 \u06a9\u0646\u0645\u061f", ru: "\u0417\u0434\u0440\u0430\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435, \u0447\u0435\u043c \u043c\u043e\u0433\u0443 \u043f\u043e\u043c\u043e\u0447\u044c?" },
-          options: [
-            { id: 'o1', turkish: 'Evet, lütfen.', hint: { tr: "Yes, please.", en: "Yes, please.", ar: "\u0646\u0639\u0645 \u0645\u0646 \u0641\u0636\u0644\u0643.", fa: "\u0628\u0644\u0647 \u0644\u0637\u0641\u0627.", ru: "\u0414\u0430, \u043f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430." }, isCorrect: true, deductsHeart: false, responseTone: 'success', npcResponse: { tr: "Peki, i\u015fleminizi yap\u0131yorum.", en: "Okay, processing.", ar: "\u062d\u0633\u0646\u0627\u060c \u062c\u0627\u0631\u064a \u0627\u0644\u062a\u0646\u0641\u064a\u0630.", fa: "\u0628\u0627\u0634\u0647\u060c \u062f\u0631 \u062d\u0627\u0644 \u0627\u0646\u062c\u0627\u0645.", ru: "\u0425\u043e\u0440\u043e\u0448\u043e, \u0432\u044b\u043f\u043e\u043b\u043d\u044f\u044e." }, nextNodeId: 'end' }
-          ]
-        },
-        {
-          nodeId: 'end', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "\u0130yi g\u00fcnler.", en: "Have a good day.", ar: "\u064a\u0648\u0645 \u0633\u0639\u064a\u062f.", fa: "\u0631\u0648\u0632 \u0628\u062e\u06cc\u0631.", ru: "\u0425\u043e\u0440\u043e\u0448\u0435\u0433\u043e \u0434\u043d\u044f." },
-          options: [], isFinal: true
-        }
-      ]
-    }] },{ id: 'a2_ptt_9', lessonNumber: 9, lessonType: 'boss_fight', title: { tr: "Patron Sava\u015f\u0131", en: "Boss Fight", ar: "\u0645\u0639\u0631\u0643\u0629 \u0627\u0644\u0632\u0639\u064a\u0645", fa: "\u0645\u0628\u0627\u0631\u0632\u0647 \u0628\u0627 \u0631\u0626\u06cc\u0633", ru: "\u0411\u043e\u0441\u0441 \u0431\u043e\u0439" }, xpReward: 70, coinReward: 35, exercises: [{
-      id: 'a2_ptt_1_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "kargo", translation: { tr: "kargo", en: "cargo", ar: "\u0628\u0631\u064a\u062f", fa: "\u067e\u0633\u062a", ru: "\u043f\u043e\u0447\u0442\u0430" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_ptt_1_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "paket", translation: { tr: "paket", en: "package", ar: "\u0637\u0631\u062f", fa: "\u0628\u0633\u062a\u0647", ru: "\u043f\u043e\u0441\u044b\u043b\u043a\u0430" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_ptt_5_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "elektrik", translation: { tr: "elektrik", en: "electricity", ar: "\u0643\u0647\u0631\u0628\u0627\u0621", fa: "\u0628\u0631\u0642", ru: "\u044d\u043b\u0435\u043a\u0442\u0440\u0438\u0447\u0435\u0441\u0442\u0432\u043e" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_ptt_5_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "su", translation: { tr: "su", en: "water", ar: "\u0645\u0627\u0621", fa: "\u0622\u0628", ru: "\u0432\u043e\u0434\u0430" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_ptt_3_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["g\u00f6nderece\u011fim", "Paket"],
-      correctOrder: ["Paket", "g\u00f6nderece\u011fim"],
-      translation: { tr: "Paket g\u00f6nderece\u011fim.", en: "I will send a package.", ar: "\u0633\u0623\u0631\u0633\u0644 \u0637\u0631\u062f\u0627.", fa: "\u0628\u0633\u062a\u0647 \u0645\u06cc\u200c\u0641\u0631\u0633\u062a\u0645.", ru: "\u042f \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u044e \u043f\u043e\u0441\u044b\u043b\u043a\u0443." }
-    }, {
-      id: 'a2_ptt_7_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["g\u00f6nderece\u011fim", "Paket"],
-      correctOrder: ["Paket", "g\u00f6nderece\u011fim"],
-      translation: { tr: "Paket g\u00f6nderece\u011fim.", en: "I will send a package.", ar: "\u0633\u0623\u0631\u0633\u0644 \u0637\u0631\u062f\u0627.", fa: "\u0628\u0633\u062a\u0647 \u0645\u06cc\u200c\u0641\u0631\u0633\u062a\u0645.", ru: "\u042f \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u044e \u043f\u043e\u0441\u044b\u043b\u043a\u0443." }
-    }, {
-      id: 'a2_ptt_3_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Bu ____ yurt d\u0131\u015f\u0131na gidecek.",
-      correctAnswers: ["paketi"],
-      wordBank: ["paketi", "kargosu", "faturas\u0131"],
-      translation: { tr: "Bu paketi yurt d\u0131\u015f\u0131na gidecek.", en: "This package will go abroad.", ar: "\u0647\u0630\u0627 \u0627\u0644\u0637\u0631\u062f \u0633\u064a\u0630\u0647\u0628 \u0625\u0644\u0649 \u0627\u0644\u062e\u0627\u0631\u062c.", fa: "\u0627\u06cc\u0646 \u0628\u0633\u062a\u0647 \u0628\u0647 \u062e\u0627\u0631\u062c \u0627\u0632 \u06a9\u0634\u0648\u0631 \u0645\u06cc\u200c\u0631\u0648\u062f.", ru: "\u042d\u0442\u0430 \u043f\u043e\u0441\u044b\u043b\u043a\u0430 \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u0441\u044f \u0437\u0430 \u0433\u0440\u0430\u043d\u0438\u0446\u0443." }
-    }, {
-      id: 'a2_ptt_7_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Bu ____ yurt d\u0131\u015f\u0131na gidecek.",
-      correctAnswers: ["paketi"],
-      wordBank: ["paketi", "kargosu", "faturas\u0131"],
-      translation: { tr: "Bu paketi yurt d\u0131\u015f\u0131na gidecek.", en: "This package will go abroad.", ar: "\u0647\u0630\u0627 \u0627\u0644\u0637\u0631\u062f \u0633\u064a\u0630\u0647\u0628 \u0625\u0644\u0649 \u0627\u0644\u062e\u0627\u0631\u062c.", fa: "\u0627\u06cc\u0646 \u0628\u0633\u062a\u0647 \u0628\u0647 \u062e\u0627\u0631\u062c \u0627\u0632 \u06a9\u0634\u0648\u0631 \u0645\u06cc\u200c\u0631\u0648\u062f.", ru: "\u042d\u0442\u0430 \u043f\u043e\u0441\u044b\u043b\u043a\u0430 \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u0441\u044f \u0437\u0430 \u0433\u0440\u0430\u043d\u0438\u0446\u0443." }
-    }] }] },{ id: 'a2_konut', unitNumber: 5, name: { tr: "Konut", en: "Housing", ar: "\u0625\u0633\u0643\u0627\u0646", fa: "\u0645\u0633\u06a9\u0646", ru: "\u0416\u0438\u043b\u044c\u0435" }, emoji: '🏘️', color: 'from-orange-400 to-red-500', lessons: [{ id: 'a2_konut_1', lessonNumber: 1, lessonType: 'vocabulary', title: { tr: "Kelime: B\u00f6l\u00fcm 1", en: "Vocab 1", ar: "\u0645\u0641\u0631\u062f\u0627\u062a 1", fa: "\u0648\u0627\u0698\u06af\u0627\u0646 1", ru: "\u0421\u043b\u043e\u0432\u0430\u0440\u044c 1" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_konut_1_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "ev", translation: { tr: "ev", en: "house", ar: "\u0645\u0646\u0632\u0644", fa: "\u062e\u0627\u0646\u0647", ru: "\u0434\u043e\u043c" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_konut_1_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "kiral\u0131k", translation: { tr: "kiral\u0131k", en: "for rent", ar: "\u0644\u0644\u0625\u064a\u062c\u0627\u0631", fa: "\u0628\u0631\u0627\u06cc \u0627\u062c\u0627\u0631\u0647", ru: "\u0432 \u0430\u0440\u0435\u043d\u0434\u0443" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_konut_1_2',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "sat\u0131l\u0131k", translation: { tr: "sat\u0131l\u0131k", en: "for sale", ar: "\u0644\u0644\u0628\u064a\u0639", fa: "\u0628\u0631\u0627\u06cc \u0641\u0631\u0648\u0634", ru: "\u043d\u0430 \u043f\u0440\u043e\u0434\u0430\u0436\u0443" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_konut_1_3',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "depozito", translation: { tr: "depozito", en: "deposit", ar: "\u0648\u062f\u064a\u0639\u0629", fa: "\u0648\u062f\u06cc\u0639\u0647", ru: "\u0434\u0435\u043f\u043e\u0437\u0438\u0442" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_konut_1_4',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "kira", translation: { tr: "kira", en: "rent", ar: "\u0625\u064a\u062c\u0627\u0631", fa: "\u0627\u062c\u0627\u0631\u0647", ru: "\u0430\u0440\u0435\u043d\u0434\u0430" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }] },{ id: 'a2_konut_2', lessonNumber: 2, lessonType: 'practice', title: { tr: "Pratik 1", en: "Practice 1", ar: "\u062a\u062f\u0631\u064a\u0628 1", fa: "\u062a\u0645\u0631\u06cc\u0646 1", ru: "\u041f\u0440\u0430\u043a\u0442\u0438\u043a\u0430 1" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_konut_2_1',
-      type: 'drag_drop',
-      prompt: { tr: "E\u015fle\u015ftirin", en: "Match", ar: "\u062a\u0637\u0627\u0628\u0642", fa: "\u062a\u0637\u0627\u0628\u0642", ru: "\u0421\u043e\u043f\u043e\u0441\u0442\u0430\u0432\u044c\u0442\u0435" },
-      pairs: [{ id: 'p1', turkish: "ev", translation: { tr: "house", en: "house", ar: "\u0645\u0646\u0632\u0644", fa: "\u062e\u0627\u0646\u0647", ru: "\u0434\u043e\u043c" } }, { id: 'p2', turkish: "kiral\u0131k", translation: { tr: "for rent", en: "for rent", ar: "\u0644\u0644\u0625\u064a\u062c\u0627\u0631", fa: "\u0628\u0631\u0627\u06cc \u0627\u062c\u0627\u0631\u0647", ru: "\u0432 \u0430\u0440\u0435\u043d\u0434\u0443" } }, { id: 'p3', turkish: "sat\u0131l\u0131k", translation: { tr: "for sale", en: "for sale", ar: "\u0644\u0644\u0628\u064a\u0639", fa: "\u0628\u0631\u0627\u06cc \u0641\u0631\u0648\u0634", ru: "\u043d\u0430 \u043f\u0440\u043e\u0434\u0430\u0436\u0443" } }, { id: 'p4', turkish: "depozito", translation: { tr: "deposit", en: "deposit", ar: "\u0648\u062f\u064a\u0639\u0629", fa: "\u0648\u062f\u06cc\u0639\u0647", ru: "\u0434\u0435\u043f\u043e\u0437\u0438\u0442" } }, { id: 'p5', turkish: "kira", translation: { tr: "rent", en: "rent", ar: "\u0625\u064a\u062c\u0627\u0631", fa: "\u0627\u062c\u0627\u0631\u0647", ru: "\u0430\u0440\u0435\u043d\u0434\u0430" } }]
-    }] },{ id: 'a2_konut_3', lessonNumber: 3, lessonType: 'sentence_building', title: { tr: "C\u00fcmle Kurma 1", en: "Sentences 1", ar: "\u062c\u0645\u0644 1", fa: "\u062c\u0645\u0644\u0627\u062a 1", ru: "\u041f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u044f 1" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_konut_3_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["kadar", "ne", "Kira"],
-      correctOrder: ["Kira", "ne", "kadar"],
-      translation: { tr: "Kira ne kadar?", en: "How much is rent?", ar: "\u0643\u0645 \u0627\u0644\u0625\u064a\u062c\u0627\u0631\u061f", fa: "\u0627\u062c\u0627\u0631\u0647 \u0686\u0642\u062f\u0631 \u0627\u0633\u062a\u061f", ru: "\u0421\u043a\u043e\u043b\u044c\u043a\u043e \u0441\u0442\u043e\u0438\u0442 \u0430\u0440\u0435\u043d\u0434\u0430?" }
-    }, {
-      id: 'a2_konut_3_2',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["verece\u011fim", "Depozito"],
-      correctOrder: ["Depozito", "verece\u011fim"],
-      translation: { tr: "Depozito verece\u011fim.", en: "I will give a deposit.", ar: "\u0633\u0623\u0639\u0637\u064a \u0648\u062f\u064a\u0639\u0629.", fa: "\u0648\u062f\u06cc\u0639\u0647 \u0645\u06cc\u200c\u062f\u0647\u0645.", ru: "\u042f \u0434\u0430\u043c \u0434\u0435\u043f\u043e\u0437\u0438\u0442." }
-    }, {
-      id: 'a2_konut_3_3',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["bozuk", "Asans\u00f6r"],
-      correctOrder: ["Asans\u00f6r", "bozuk"],
-      translation: { tr: "Asans\u00f6r bozuk.", en: "The elevator is broken.", ar: "\u0627\u0644\u0645\u0635\u0639\u062f \u0645\u0639\u0637\u0644.", fa: "\u0622\u0633\u0627\u0646\u0633\u0648\u0631 \u062e\u0631\u0627\u0628 \u0627\u0633\u062a.", ru: "\u041b\u0438\u0444\u0442 \u0441\u043b\u043e\u043c\u0430\u043d." }
-    }, {
-      id: 'a2_konut_3_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Evimiz ____.",
-      correctAnswers: ["kiral\u0131k"],
-      wordBank: ["kiral\u0131k", "sat\u0131l\u0131k", "b\u00fcy\u00fck"],
-      translation: { tr: "Evimiz kiral\u0131k.", en: "Our house is for rent.", ar: "\u0645\u0646\u0632\u0644\u0646\u0627 \u0644\u0644\u0625\u064a\u062c\u0627\u0631.", fa: "\u062e\u0627\u0646\u0647 \u0645\u0627 \u0628\u0631\u0627\u06cc \u0627\u062c\u0627\u0631\u0647 \u0627\u0633\u062a.", ru: "\u041d\u0430\u0448 \u0434\u043e\u043c \u0432 \u0430\u0440\u0435\u043d\u0434\u0443." }
-    }, {
-      id: 'a2_konut_3_5',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Ayl\u0131k ____ \u00e7ok y\u00fcksek.",
-      correctAnswers: ["aidat"],
-      wordBank: ["aidat", "para", "fatura"],
-      translation: { tr: "Ayl\u0131k aidat \u00e7ok y\u00fcksek.", en: "Monthly dues are very high.", ar: "\u0627\u0644\u0631\u0633\u0648\u0645 \u0627\u0644\u0634\u0647\u0631\u064a\u0629 \u0639\u0627\u0644\u064a\u0629 \u062c\u062f\u0627.", fa: "\u0634\u0627\u0631\u0698 \u0645\u0627\u0647\u0627\u0646\u0647 \u062e\u06cc\u0644\u06cc \u0632\u06cc\u0627\u062f \u0627\u0633\u062a.", ru: "\u0415\u0436\u0435\u043c\u0435\u0441\u044f\u0447\u043d\u044b\u0435 \u0432\u0437\u043d\u043e\u0441\u044b \u043e\u0447\u0435\u043d\u044c \u0432\u044b\u0441\u043e\u043a\u0438\u0435." }
-    }] },{ id: 'a2_konut_4', lessonNumber: 4, lessonType: 'rpg', title: { tr: "Diyalog 1", en: "Dialogue 1", ar: "\u062d\u0648\u0627\u0631 1", fa: "\u06af\u0641\u062a\u06af\u0648 1", ru: "\u0414\u0438\u0430\u043b\u043e\u0433 1" }, xpReward: 35, coinReward: 15, exercises: [{
-      id: 'a2_konut_4_1',
-      type: 'rpg_dialogue',
-      scenario: { tr: "RPG Senaryosu", en: "RPG Scenario", ar: "\u0633\u064a\u0646\u0627\u0631\u064a\u0648 RPG", fa: "\u0633\u0646\u0627\u0631\u06cc\u0648 RPG", ru: "\u0421\u0446\u0435\u043d\u0430\u0440\u0438\u0439 RPG" },
-      scenarioEmoji: '🗣️',
-      startNodeId: 'n1',
-      nodes: [
-        {
-          nodeId: 'n1', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "Merhaba, size nas\u0131l yard\u0131mc\u0131 olabilirim?", en: "Hello, how can I help you?", ar: "\u0645\u0631\u062d\u0628\u0627\u060c \u0643\u064a\u0641 \u064a\u0645\u0643\u0646\u0646\u064a \u0645\u0633\u0627\u0639\u062f\u062a\u0643\u061f", fa: "\u0633\u0644\u0627\u0645\u060c \u0686\u0637\u0648\u0631 \u0645\u06cc\u200c\u062a\u0648\u0627\u0646\u0645 \u06a9\u0645\u06a9 \u06a9\u0646\u0645\u061f", ru: "\u0417\u0434\u0440\u0430\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435, \u0447\u0435\u043c \u043c\u043e\u0433\u0443 \u043f\u043e\u043c\u043e\u0447\u044c?" },
-          options: [
-            { id: 'o1', turkish: 'Evet, lütfen.', hint: { tr: "Yes, please.", en: "Yes, please.", ar: "\u0646\u0639\u0645 \u0645\u0646 \u0641\u0636\u0644\u0643.", fa: "\u0628\u0644\u0647 \u0644\u0637\u0641\u0627.", ru: "\u0414\u0430, \u043f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430." }, isCorrect: true, deductsHeart: false, responseTone: 'success', npcResponse: { tr: "Peki, i\u015fleminizi yap\u0131yorum.", en: "Okay, processing.", ar: "\u062d\u0633\u0646\u0627\u060c \u062c\u0627\u0631\u064a \u0627\u0644\u062a\u0646\u0641\u064a\u0630.", fa: "\u0628\u0627\u0634\u0647\u060c \u062f\u0631 \u062d\u0627\u0644 \u0627\u0646\u062c\u0627\u0645.", ru: "\u0425\u043e\u0440\u043e\u0448\u043e, \u0432\u044b\u043f\u043e\u043b\u043d\u044f\u044e." }, nextNodeId: 'end' }
-          ]
-        },
-        {
-          nodeId: 'end', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "\u0130yi g\u00fcnler.", en: "Have a good day.", ar: "\u064a\u0648\u0645 \u0633\u0639\u064a\u062f.", fa: "\u0631\u0648\u0632 \u0628\u062e\u06cc\u0631.", ru: "\u0425\u043e\u0440\u043e\u0448\u0435\u0433\u043e \u0434\u043d\u044f." },
-          options: [], isFinal: true
-        }
-      ]
-    }] },{ id: 'a2_konut_5', lessonNumber: 5, lessonType: 'vocabulary', title: { tr: "Kelime: B\u00f6l\u00fcm 2", en: "Vocab 2", ar: "\u0645\u0641\u0631\u062f\u0627\u062a 2", fa: "\u0648\u0627\u0698\u06af\u0627\u0646 2", ru: "\u0421\u043b\u043e\u0432\u0430\u0440\u044c 2" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_konut_5_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "kom\u015fu", translation: { tr: "kom\u015fu", en: "neighbor", ar: "\u062c\u0627\u0631", fa: "\u0647\u0645\u0633\u0627\u06cc\u0647", ru: "\u0441\u043e\u0441\u0435\u0434" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_konut_5_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "aidat", translation: { tr: "aidat", en: "dues", ar: "\u0631\u0633\u0648\u0645", fa: "\u0634\u0627\u0631\u0698", ru: "\u0432\u0437\u043d\u043e\u0441\u044b" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_konut_5_2',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "asans\u00f6r", translation: { tr: "asans\u00f6r", en: "elevator", ar: "\u0645\u0635\u0639\u062f", fa: "\u0622\u0633\u0627\u0646\u0633\u0648\u0631", ru: "\u043b\u0438\u0444\u0442" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_konut_5_3',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "tadilat", translation: { tr: "tadilat", en: "renovation", ar: "\u062a\u062c\u062f\u064a\u062f", fa: "\u0628\u0627\u0632\u0633\u0627\u0632\u06cc", ru: "\u0440\u0435\u043c\u043e\u043d\u0442" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_konut_5_4',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "kap\u0131c\u0131", translation: { tr: "kap\u0131c\u0131", en: "doorman", ar: "\u0628\u0648\u0627\u0628", fa: "\u0633\u0631\u0627\u06cc\u062f\u0627\u0631", ru: "\u043a\u043e\u043d\u0441\u044c\u0435\u0440\u0436" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }] },{ id: 'a2_konut_6', lessonNumber: 6, lessonType: 'practice', title: { tr: "Pratik 2", en: "Practice 2", ar: "\u062a\u062f\u0631\u064a\u0628 2", fa: "\u062a\u0645\u0631\u06cc\u0646 2", ru: "\u041f\u0440\u0430\u043a\u0442\u0438\u043a\u0430 2" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_konut_6_1',
-      type: 'drag_drop',
-      prompt: { tr: "E\u015fle\u015ftirin", en: "Match", ar: "\u062a\u0637\u0627\u0628\u0642", fa: "\u062a\u0637\u0627\u0628\u0642", ru: "\u0421\u043e\u043f\u043e\u0441\u0442\u0430\u0432\u044c\u0442\u0435" },
-      pairs: [{ id: 'p1', turkish: "kom\u015fu", translation: { tr: "neighbor", en: "neighbor", ar: "\u062c\u0627\u0631", fa: "\u0647\u0645\u0633\u0627\u06cc\u0647", ru: "\u0441\u043e\u0441\u0435\u0434" } }, { id: 'p2', turkish: "aidat", translation: { tr: "dues", en: "dues", ar: "\u0631\u0633\u0648\u0645", fa: "\u0634\u0627\u0631\u0698", ru: "\u0432\u0437\u043d\u043e\u0441\u044b" } }, { id: 'p3', turkish: "asans\u00f6r", translation: { tr: "elevator", en: "elevator", ar: "\u0645\u0635\u0639\u062f", fa: "\u0622\u0633\u0627\u0646\u0633\u0648\u0631", ru: "\u043b\u0438\u0444\u0442" } }, { id: 'p4', turkish: "tadilat", translation: { tr: "renovation", en: "renovation", ar: "\u062a\u062c\u062f\u064a\u062f", fa: "\u0628\u0627\u0632\u0633\u0627\u0632\u06cc", ru: "\u0440\u0435\u043c\u043e\u043d\u0442" } }, { id: 'p5', turkish: "kap\u0131c\u0131", translation: { tr: "doorman", en: "doorman", ar: "\u0628\u0648\u0627\u0628", fa: "\u0633\u0631\u0627\u06cc\u062f\u0627\u0631", ru: "\u043a\u043e\u043d\u0441\u044c\u0435\u0440\u0436" } }]
-    }] },{ id: 'a2_konut_7', lessonNumber: 7, lessonType: 'sentence_building', title: { tr: "C\u00fcmle Kurma 2", en: "Sentences 2", ar: "\u062c\u0645\u0644 2", fa: "\u062c\u0645\u0644\u0627\u062a 2", ru: "\u041f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u044f 2" }, xpReward: 20, coinReward: 10, exercises: [{
-      id: 'a2_konut_7_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["kadar", "ne", "Kira"],
-      correctOrder: ["Kira", "ne", "kadar"],
-      translation: { tr: "Kira ne kadar?", en: "How much is rent?", ar: "\u0643\u0645 \u0627\u0644\u0625\u064a\u062c\u0627\u0631\u061f", fa: "\u0627\u062c\u0627\u0631\u0647 \u0686\u0642\u062f\u0631 \u0627\u0633\u062a\u061f", ru: "\u0421\u043a\u043e\u043b\u044c\u043a\u043e \u0441\u0442\u043e\u0438\u0442 \u0430\u0440\u0435\u043d\u0434\u0430?" }
-    }, {
-      id: 'a2_konut_7_2',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["verece\u011fim", "Depozito"],
-      correctOrder: ["Depozito", "verece\u011fim"],
-      translation: { tr: "Depozito verece\u011fim.", en: "I will give a deposit.", ar: "\u0633\u0623\u0639\u0637\u064a \u0648\u062f\u064a\u0639\u0629.", fa: "\u0648\u062f\u06cc\u0639\u0647 \u0645\u06cc\u200c\u062f\u0647\u0645.", ru: "\u042f \u0434\u0430\u043c \u0434\u0435\u043f\u043e\u0437\u0438\u0442." }
-    }, {
-      id: 'a2_konut_7_3',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["bozuk", "Asans\u00f6r"],
-      correctOrder: ["Asans\u00f6r", "bozuk"],
-      translation: { tr: "Asans\u00f6r bozuk.", en: "The elevator is broken.", ar: "\u0627\u0644\u0645\u0635\u0639\u062f \u0645\u0639\u0637\u0644.", fa: "\u0622\u0633\u0627\u0646\u0633\u0648\u0631 \u062e\u0631\u0627\u0628 \u0627\u0633\u062a.", ru: "\u041b\u0438\u0444\u0442 \u0441\u043b\u043e\u043c\u0430\u043d." }
-    }, {
-      id: 'a2_konut_7_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Evimiz ____.",
-      correctAnswers: ["kiral\u0131k"],
-      wordBank: ["kiral\u0131k", "sat\u0131l\u0131k", "b\u00fcy\u00fck"],
-      translation: { tr: "Evimiz kiral\u0131k.", en: "Our house is for rent.", ar: "\u0645\u0646\u0632\u0644\u0646\u0627 \u0644\u0644\u0625\u064a\u062c\u0627\u0631.", fa: "\u062e\u0627\u0646\u0647 \u0645\u0627 \u0628\u0631\u0627\u06cc \u0627\u062c\u0627\u0631\u0647 \u0627\u0633\u062a.", ru: "\u041d\u0430\u0448 \u0434\u043e\u043c \u0432 \u0430\u0440\u0435\u043d\u0434\u0443." }
-    }, {
-      id: 'a2_konut_7_5',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Ayl\u0131k ____ \u00e7ok y\u00fcksek.",
-      correctAnswers: ["aidat"],
-      wordBank: ["aidat", "para", "fatura"],
-      translation: { tr: "Ayl\u0131k aidat \u00e7ok y\u00fcksek.", en: "Monthly dues are very high.", ar: "\u0627\u0644\u0631\u0633\u0648\u0645 \u0627\u0644\u0634\u0647\u0631\u064a\u0629 \u0639\u0627\u0644\u064a\u0629 \u062c\u062f\u0627.", fa: "\u0634\u0627\u0631\u0698 \u0645\u0627\u0647\u0627\u0646\u0647 \u062e\u06cc\u0644\u06cc \u0632\u06cc\u0627\u062f \u0627\u0633\u062a.", ru: "\u0415\u0436\u0435\u043c\u0435\u0441\u044f\u0447\u043d\u044b\u0435 \u0432\u0437\u043d\u043e\u0441\u044b \u043e\u0447\u0435\u043d\u044c \u0432\u044b\u0441\u043e\u043a\u0438\u0435." }
-    }] },{ id: 'a2_konut_8', lessonNumber: 8, lessonType: 'rpg', title: { tr: "Diyalog 2", en: "Dialogue 2", ar: "\u062d\u0648\u0627\u0631 2", fa: "\u06af\u0641\u062a\u06af\u0648 2", ru: "\u0414\u0438\u0430\u043b\u043e\u0433 2" }, xpReward: 35, coinReward: 15, exercises: [{
-      id: 'a2_konut_8_1',
-      type: 'rpg_dialogue',
-      scenario: { tr: "RPG Senaryosu 2", en: "RPG Scenario 2", ar: "\u0633\u064a\u0646\u0627\u0631\u064a\u0648 RPG 2", fa: "\u0633\u0646\u0627\u0631\u06cc\u0648 RPG 2", ru: "\u0421\u0446\u0435\u043d\u0430\u0440\u0438\u0439 RPG 2" },
-      scenarioEmoji: '🗣️',
-      startNodeId: 'n1',
-      nodes: [
-        {
-          nodeId: 'n1', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "Merhaba, size nas\u0131l yard\u0131mc\u0131 olabilirim?", en: "Hello, how can I help you?", ar: "\u0645\u0631\u062d\u0628\u0627\u060c \u0643\u064a\u0641 \u064a\u0645\u0643\u0646\u0646\u064a \u0645\u0633\u0627\u0639\u062f\u062a\u0643\u061f", fa: "\u0633\u0644\u0627\u0645\u060c \u0686\u0637\u0648\u0631 \u0645\u06cc\u200c\u062a\u0648\u0627\u0646\u0645 \u06a9\u0645\u06a9 \u06a9\u0646\u0645\u061f", ru: "\u0417\u0434\u0440\u0430\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435, \u0447\u0435\u043c \u043c\u043e\u0433\u0443 \u043f\u043e\u043c\u043e\u0447\u044c?" },
-          options: [
-            { id: 'o1', turkish: 'Evet, lütfen.', hint: { tr: "Yes, please.", en: "Yes, please.", ar: "\u0646\u0639\u0645 \u0645\u0646 \u0641\u0636\u0644\u0643.", fa: "\u0628\u0644\u0647 \u0644\u0637\u0641\u0627.", ru: "\u0414\u0430, \u043f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430." }, isCorrect: true, deductsHeart: false, responseTone: 'success', npcResponse: { tr: "Peki, i\u015fleminizi yap\u0131yorum.", en: "Okay, processing.", ar: "\u062d\u0633\u0646\u0627\u060c \u062c\u0627\u0631\u064a \u0627\u0644\u062a\u0646\u0641\u064a\u0630.", fa: "\u0628\u0627\u0634\u0647\u060c \u062f\u0631 \u062d\u0627\u0644 \u0627\u0646\u062c\u0627\u0645.", ru: "\u0425\u043e\u0440\u043e\u0448\u043e, \u0432\u044b\u043f\u043e\u043b\u043d\u044f\u044e." }, nextNodeId: 'end' }
-          ]
-        },
-        {
-          nodeId: 'end', npcName: 'Görevli', npcEmoji: '👤',
-          npcText: { tr: "\u0130yi g\u00fcnler.", en: "Have a good day.", ar: "\u064a\u0648\u0645 \u0633\u0639\u064a\u062f.", fa: "\u0631\u0648\u0632 \u0628\u062e\u06cc\u0631.", ru: "\u0425\u043e\u0440\u043e\u0448\u0435\u0433\u043e \u0434\u043d\u044f." },
-          options: [], isFinal: true
-        }
-      ]
-    }] },{ id: 'a2_konut_9', lessonNumber: 9, lessonType: 'boss_fight', title: { tr: "Patron Sava\u015f\u0131", en: "Boss Fight", ar: "\u0645\u0639\u0631\u0643\u0629 \u0627\u0644\u0632\u0639\u064a\u0645", fa: "\u0645\u0628\u0627\u0631\u0632\u0647 \u0628\u0627 \u0631\u0626\u06cc\u0633", ru: "\u0411\u043e\u0441\u0441 \u0431\u043e\u0439" }, xpReward: 70, coinReward: 35, exercises: [{
-      id: 'a2_konut_1_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "ev", translation: { tr: "ev", en: "house", ar: "\u0645\u0646\u0632\u0644", fa: "\u062e\u0627\u0646\u0647", ru: "\u0434\u043e\u043c" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_konut_1_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "kiral\u0131k", translation: { tr: "kiral\u0131k", en: "for rent", ar: "\u0644\u0644\u0625\u064a\u062c\u0627\u0631", fa: "\u0628\u0631\u0627\u06cc \u0627\u062c\u0627\u0631\u0647", ru: "\u0432 \u0430\u0440\u0435\u043d\u0434\u0443" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_konut_5_0',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "kom\u015fu", translation: { tr: "kom\u015fu", en: "neighbor", ar: "\u062c\u0627\u0631", fa: "\u0647\u0645\u0633\u0627\u06cc\u0647", ru: "\u0441\u043e\u0441\u0435\u0434" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_konut_5_1',
-      type: 'multiple_choice',
-      prompt: { tr: "Bu kelimenin anlam\u0131 nedir?", en: "What does this mean?", ar: "\u0645\u0627\u0630\u0627 \u064a\u0639\u0646\u064a \u0647\u0630\u0627\u061f", fa: "\u0627\u06cc\u0646 \u0628\u0647 \u0686\u0647 \u0645\u0639\u0646\u0627\u0633\u062a\u061f", ru: "\u0427\u0442\u043e \u044d\u0442\u043e \u0437\u043d\u0430\u0447\u0438\u0442?" },
-      options: [
-        { id: 'o1', turkish: "aidat", translation: { tr: "aidat", en: "dues", ar: "\u0631\u0633\u0648\u0645", fa: "\u0634\u0627\u0631\u0698", ru: "\u0432\u0437\u043d\u043e\u0441\u044b" }, isCorrect: true },
-        { id: 'o2', turkish: 'yanlış', translation: { tr: "yanl\u0131\u015f", en: "wrong", ar: "\u062e\u0627\u0637\u0626", fa: "\u0627\u0634\u062a\u0628\u0627\u0647", ru: "\u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u043e" }, isCorrect: false },
-        { id: 'o3', turkish: 'hata', translation: { tr: "hata", en: "error", ar: "\u062e\u0637\u0623", fa: "\u062e\u0637\u0627", ru: "\u043e\u0448\u0438\u0431\u043a\u0430" }, isCorrect: false }
-      ]
-    }, {
-      id: 'a2_konut_3_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["kadar", "ne", "Kira"],
-      correctOrder: ["Kira", "ne", "kadar"],
-      translation: { tr: "Kira ne kadar?", en: "How much is rent?", ar: "\u0643\u0645 \u0627\u0644\u0625\u064a\u062c\u0627\u0631\u061f", fa: "\u0627\u062c\u0627\u0631\u0647 \u0686\u0642\u062f\u0631 \u0627\u0633\u062a\u061f", ru: "\u0421\u043a\u043e\u043b\u044c\u043a\u043e \u0441\u0442\u043e\u0438\u0442 \u0430\u0440\u0435\u043d\u0434\u0430?" }
-    }, {
-      id: 'a2_konut_7_1',
-      type: 'word_order',
-      prompt: { tr: "C\u00fcmleyi kurun", en: "Build the sentence", ar: "\u0642\u0645 \u0628\u0628\u0646\u0627\u0621 \u0627\u0644\u062c\u0645\u0644\u0629", fa: "\u062c\u0645\u0644\u0647 \u0628\u0633\u0627\u0632\u06cc\u062f", ru: "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u0442\u0435 \u043f\u0440\u0435\u0434\u043b\u043e\u0436\u0435\u043d\u0438\u0435" },
-      scrambledWords: ["kadar", "ne", "Kira"],
-      correctOrder: ["Kira", "ne", "kadar"],
-      translation: { tr: "Kira ne kadar?", en: "How much is rent?", ar: "\u0643\u0645 \u0627\u0644\u0625\u064a\u062c\u0627\u0631\u061f", fa: "\u0627\u062c\u0627\u0631\u0647 \u0686\u0642\u062f\u0631 \u0627\u0633\u062a\u061f", ru: "\u0421\u043a\u043e\u043b\u044c\u043a\u043e \u0441\u0442\u043e\u0438\u0442 \u0430\u0440\u0435\u043d\u0434\u0430?" }
-    }, {
-      id: 'a2_konut_3_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Evimiz ____.",
-      correctAnswers: ["kiral\u0131k"],
-      wordBank: ["kiral\u0131k", "sat\u0131l\u0131k", "b\u00fcy\u00fck"],
-      translation: { tr: "Evimiz kiral\u0131k.", en: "Our house is for rent.", ar: "\u0645\u0646\u0632\u0644\u0646\u0627 \u0644\u0644\u0625\u064a\u062c\u0627\u0631.", fa: "\u062e\u0627\u0646\u0647 \u0645\u0627 \u0628\u0631\u0627\u06cc \u0627\u062c\u0627\u0631\u0647 \u0627\u0633\u062a.", ru: "\u041d\u0430\u0448 \u0434\u043e\u043c \u0432 \u0430\u0440\u0435\u043d\u0434\u0443." }
-    }, {
-      id: 'a2_konut_7_4',
-      type: 'fill_in_the_blank',
-      prompt: { tr: "Bo\u015flu\u011fu doldurun", en: "Fill in the blank", ar: "\u0627\u0645\u0644\u0623 \u0627\u0644\u0641\u0631\u0627\u063a", fa: "\u062c\u0627\u06cc \u062e\u0627\u0644\u06cc \u0631\u0627 \u067e\u0631 \u06a9\u0646\u06cc\u062f", ru: "\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u0435 \u043f\u0440\u043e\u043f\u0443\u0441\u043a" },
-      sentenceTemplate: "Evimiz ____.",
-      correctAnswers: ["kiral\u0131k"],
-      wordBank: ["kiral\u0131k", "sat\u0131l\u0131k", "b\u00fcy\u00fck"],
-      translation: { tr: "Evimiz kiral\u0131k.", en: "Our house is for rent.", ar: "\u0645\u0646\u0632\u0644\u0646\u0627 \u0644\u0644\u0625\u064a\u062c\u0627\u0631.", fa: "\u062e\u0627\u0646\u0647 \u0645\u0627 \u0628\u0631\u0627\u06cc \u0627\u062c\u0627\u0631\u0647 \u0627\u0633\u062a.", ru: "\u041d\u0430\u0448 \u0434\u043e\u043c \u0432 \u0430\u0440\u0435\u043d\u0434\u0443." }
-    }] }] }]
+  id: "level_a2",
+  code: "A2",
+  title: t("A2 Seviyesi", "A2 Level", "مستوى A2", "سطح A2", "Уровень A2"),
+  description: t("Günlük yaşam ve kurumlar", "Daily life and institutions", "الحياة اليومية والمؤسسات", "زندگی روزمره و موسسات", "Повседневная жизнь и учреждения"),
+  units: [
+    generateUnit('a2_devlet', 'devlet', t("Devlet Dairesi", "Government Office", "دائرة حكومية", "اداره دولتی", "Государственное учреждение"), '🏛️', 'from-blue-500 to-indigo-600', u1Vocab1, u1Vocab2, u1Vocab3, u1RPG1, u1RPG2, [
+      t("Randevu almak istiyorum.", "I want to get an appointment.", "أريد تحديد موعد.", "می خواهم وقت بگیرم.", "Я хочу записаться на прием."),
+      t("Hangi belgeler gerekli?", "Which documents are required?", "ما هي المستندات المطلوبة؟", "چه مدارکی لازم است؟", "Какие документы требуются?"),
+      t("Nereye başvuruyorum?", "Where do I apply?", "أين أقدم طلبي؟", "کجا درخواست بدهم؟", "Куда мне подать заявление?"),
+      t("Formları doldurur musunuz?", "Can you fill out the forms?", "هل يمكنك ملء الاستمارات؟", "می توانید فرم ها را پر کنید؟", "Не могли бы вы заполнить формы?"),
+      t("İkametim için ne gerekiyor?", "What is needed for my residence?", "ما المطلوب لإقامتي؟", "برای اقامت من چه چیزی لازم است؟", "Что нужно для моего проживания?")
+    ], {
+      title: t("Devlet Dairesi", "Government Office", "دائرة حكومية", "اداره دولتی", "Государственное учреждение"),
+      description: t("Resmi işlemler", "Official procedures", "الإجراءات الرسمية", "رویه های رسمی", "Официальные процедуры"),
+      vocabulary: [...u1Vocab1, ...u1Vocab2].map(v => ({word: v.tr, translation: v})),
+      keyPhrases: [{phrase: "Randevu almak istiyorum", translation: t("Randevu almak istiyorum.", "I want to get an appointment.", "أريد تحديد موعد.", "می خواهم وقت بگیرم.", "Я хочу записаться на прием.")}],
+      grammarNotes: [{
+        title: t("Gereklilik kipi", "Necessity suffix", "لاحقة الضرورة", "پسوند ضرورت", "Суффикс необходимости"),
+        explanation: t("-meli/-malı", "-meli/-malı", "-meli/-malı", "-meli/-malı", "-meli/-malı"),
+        examples: [{tr: "Gitmeliyim", translation: t("I must go", "I must go", "يجب أن أذهب", "باید بروم", "Я должен идти")}]
+      }]
+    }),
+    generateUnit('a2_banka', 'banka', t("Banka & Para", "Bank & Money", "البنك والمال", "بانک و پول", "Банк и деньги"), '🏦', 'from-emerald-500 to-teal-600', u2Vocab1, u2Vocab2, u2Vocab3, u2RPG1, u2RPG2, [
+      t("Hesap açmak istiyorum.", "I want to open an account.", "أريد فتح حساب.", "من می خواهم یک حساب باز کنم.", "Я хочу открыть счет."),
+      t("Kart başvurusu yapabilir miyim?", "Can I apply for a card?", "هل يمكنني التقدم بطلب للحصول على بطاقة؟", "آیا می توانم برای کارت درخواست بدهم؟", "Могу ли я подать заявку на карту?"),
+      t("Bakiyem nedir?", "What is my balance?", "ما هو رصيدي؟", "موجودی من چقدر است؟", "Какой у меня баланс?"),
+      t("Para transferi yapmak istiyorum.", "I want to make a money transfer.", "أريد إجراء تحويل أموال.", "من می خواهم پول انتقال دهم.", "Я хочу сделать денежный перевод."),
+      t("Faturamı ödemek istiyorum.", "I want to pay my bill.", "أريد دفع فاتورتي.", "من می خواهم قبض خود را پرداخت کنم.", "Я хочу оплатить счет.")
+    ], {
+      title: t("Banka", "Bank", "البنك", "بانک", "Банк"),
+      description: t("Para işlemleri", "Money transactions", "المعاملات المالية", "تراکنش های پولی", "Денежные операции"),
+      vocabulary: [...u2Vocab1, ...u2Vocab2].map(v => ({word: v.tr, translation: v})),
+      keyPhrases: [{phrase: "Hesap açmak istiyorum", translation: t("Hesap açmak istiyorum.", "I want to open an account.", "أريد فتح حساب.", "من می خواهم یک حساب باز کنم.", "Я хочу открыть счет.")}],
+      grammarNotes: [{
+        title: t("İstemek", "To want", "يريد", "خواستن", "Хотеть"),
+        explanation: t("Verb + mak/mek istiyorum", "Verb + mak/mek istiyorum", "Verb + mak/mek istiyorum", "Verb + mak/mek istiyorum", "Verb + mak/mek istiyorum"),
+        examples: [{tr: "Ödemek istiyorum", translation: t("I want to pay", "I want to pay", "أريد أن أدفع", "می خواهم پرداخت کنم", "Я хочу заплатить")}]
+      }]
+    }),
+    generateUnit('a2_hastane', 'hastane', t("Hastane", "Hospital", "مستشفى", "بیمارستان", "Больница"), '🏥', 'from-rose-400 to-red-600', u3Vocab1, u3Vocab2, u3Vocab3, u3RPG1, u3RPG2, [
+      t("Doktor görmek istiyorum.", "I want to see a doctor.", "أريد رؤية طبيب.", "می خواهم دکتر را ببینم.", "Я хочу увидеть врача."),
+      t("Acil servis nerede?", "Where is the emergency room?", "أين غرفة الطوارئ؟", "اورژانس کجاست؟", "Где отделение скорой помощи?"),
+      t("Sigortalıyım.", "I am insured.", "أنا مؤمن عليه.", "من بیمه هستم.", "Я застрахован."),
+      t("Reçetemi almam lazım.", "I need to get my prescription.", "أحتاج للحصول على وصفتي الطبية.", "باید نسخه ام را بگیرم.", "Мне нужно получить рецепт."),
+      t("Bu ilacı nasıl kullanırım?", "How do I use this medicine?", "كيف أستخدم هذا الدواء؟", "چگونه از این دارو استفاده کنم؟", "Как мне принимать это лекарство?")
+    ], {
+      title: t("Hastane", "Hospital", "مستشفى", "بیمارستان", "Больница"),
+      description: t("Sağlık", "Health", "الصحة", "سلامتی", "Здоровье"),
+      vocabulary: [...u3Vocab1, ...u3Vocab2].map(v => ({word: v.tr, translation: v})),
+      keyPhrases: [{phrase: "Acil servis nerede?", translation: t("Acil servis nerede?", "Where is the emergency room?", "أين غرفة الطوارئ؟", "اورژانس کجاست؟", "Где отделение скорой помощи?")}],
+      grammarNotes: [{
+        title: t("Lazım", "Need", "يحتاج", "نیاز", "Нужно"),
+        explanation: t("Verb + mam/mem lazım", "Verb + mam/mem lazım", "Verb + mam/mem lazım", "Verb + mam/mem lazım", "Verb + mam/mem lazım"),
+        examples: [{tr: "Almam lazım", translation: t("I need to get", "I need to get", "أحتاج للحصول على", "باید بگیرم", "Мне нужно получить")}]
+      }]
+    }),
+    generateUnit('a2_ptt', 'ptt', t("PTT & Hizmetler", "Post Office & Services", "مكتب البريد والخدمات", "اداره پست و خدمات", "Почта и услуги"), '📮', 'from-yellow-400 to-amber-500', u4Vocab1, u4Vocab2, u4Vocab3, u4RPG1, u4RPG2, [
+      t("Bu paketi göndermek istiyorum.", "I want to send this package.", "أريد إرسال هذا الطرد.", "من می خواهم این بسته را بفرستم.", "Я хочу отправить эту посылку."),
+      t("Takip numarasını alabilir miyim?", "Can I get the tracking number?", "هل يمكنني الحصول على رقم التتبع؟", "آیا می توانم شماره پیگیری را بگیرم؟", "Могу я получить номер отслеживания?"),
+      t("Faturamı ödemek istiyorum.", "I want to pay my bill.", "أريد دفع فاتورتي.", "من می خواهم قبض خود را پرداخت کنم.", "Я хочу оплатить счет."),
+      t("Ne zaman teslim edilecek?", "When will it be delivered?", "متى سيتم تسليمها؟", "کی تحویل داده می شود؟", "Когда это будет доставлено?"),
+      t("Adresim değişti.", "My address changed.", "تغير عنواني.", "آدرس من تغییر کرد.", "Мой адрес изменился.")
+    ], {
+      title: t("PTT", "Post Office", "مكتب البريد", "اداره پست", "Почта"),
+      description: t("Kargo ve Faturalar", "Cargo and Bills", "الشحن والفواتير", "بار و قبض ها", "Грузы и счета"),
+      vocabulary: [...u4Vocab1, ...u4Vocab2].map(v => ({word: v.tr, translation: v})),
+      keyPhrases: [{phrase: "Bu paketi göndermek istiyorum", translation: t("Bu paketi göndermek istiyorum.", "I want to send this package.", "أريد إرسال هذا الطرد.", "من می خواهم این بسته را بفرستم.", "Я хочу отправить эту посылку.")}],
+      grammarNotes: [{
+        title: t("Gelecek Zaman", "Future Tense", "زمن المستقبل", "زمان آینده", "Будущее время"),
+        explanation: t("-ecek/-acak", "-ecek/-acak", "-ecek/-acak", "-ecek/-acak", "-ecek/-acak"),
+        examples: [{tr: "Teslim edilecek", translation: t("It will be delivered", "It will be delivered", "سيتم تسليمها", "تحویل داده خواهد شد", "Будет доставлено")}]
+      }]
+    }),
+    generateUnit('a2_konut', 'konut', t("Konut & Komşular", "Housing & Neighbors", "الإسكان والجيران", "مسکن و همسایگان", "Жилье и соседи"), '🏠', 'from-orange-400 to-amber-600', u5Vocab1, u5Vocab2, u5Vocab3, u5RPG1, u5RPG2, [
+      t("Daire kiralamak istiyorum.", "I want to rent an apartment.", "أريد استئجار شقة.", "من می خواهم یک آپارتمان اجاره کنم.", "Я хочу снять квартиру."),
+      t("Kira ne kadar?", "How much is the rent?", "كم الإيجار؟", "اجاره چقدر است؟", "Сколько стоит аренда?"),
+      t("Depozito kaç ay?", "How many months is the deposit?", "كم شهرا العربون؟", "ودیعه چند ماه است؟", "За сколько месяцев залог?"),
+      t("Sözleşmeyi imzalayacağız.", "We will sign the contract.", "سنوقع العقد.", "قرارداد را امضا خواهیم کرد.", "Мы подпишем договор."),
+      t("Taşınma tarihimiz ne olsun?", "What should our move date be?", "ماذا يجب أن يكون تاريخ انتقالنا؟", "تاریخ اسباب کشی ما چه باشد؟", "Какова должна быть дата нашего переезда?")
+    ], {
+      title: t("Konut", "Housing", "الإسكان", "مسکن", "Жилье"),
+      description: t("Ev ve Komşular", "Home and Neighbors", "المنزل والجيران", "خانه و همسایگان", "Дом и соседи"),
+      vocabulary: [...u5Vocab1, ...u5Vocab2].map(v => ({word: v.tr, translation: v})),
+      keyPhrases: [{phrase: "Kira ne kadar?", translation: t("Kira ne kadar?", "How much is the rent?", "كم الإيجار؟", "اجاره چقدر است؟", "Сколько стоит аренда?")}],
+      grammarNotes: [{
+        title: t("İsim Tamlaması", "Noun Compound", "مركب اسمي", "ترکیب اسمی", "Именное словосочетание"),
+        explanation: t("Noun + Noun", "Noun + Noun", "Noun + Noun", "Noun + Noun", "Noun + Noun"),
+        examples: [{tr: "Kira kontratı", translation: t("Lease contract", "Lease contract", "عقد إيجار", "قرارداد اجاره", "Договор аренды")}]
+      }]
+    })
+  ]
 };

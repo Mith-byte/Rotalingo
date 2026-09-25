@@ -68,6 +68,8 @@ export interface DragDropPair {
   target?: TText | string; // Subagent alias
   emoji?: string;
   source?: string;    // Alias used by some
+  left?: string | TText;  // Subagent alias (generated scripts used left/right)
+  right?: string | TText; // Subagent alias
 }
 
 export interface DragDropExercise {
@@ -79,7 +81,7 @@ export interface DragDropExercise {
 }
 
 // ── Word Order ────────────────────────────────────────────────
-export type WordToken = string | { id?: string; text: string };
+export type WordToken = string | { id?: string; text: string } | TText;
 
 export interface WordOrderExercise {
   id: string;
@@ -88,7 +90,7 @@ export interface WordOrderExercise {
   question?: TText;
   // Canonical fields
   scrambledWords?: string[];
-  correctOrder?: string[];
+  correctOrder?: string[] | number[];  // Subagent sometimes used number indices
   translation?: TText | string;
   // Subagent aliases
   sentence?: TText | string;   // Contains the full sentence
@@ -108,8 +110,9 @@ export interface FIBExercise {
   prompt?: TText;
   question?: TText;
   // Canonical fields
-  sentenceTemplate?: string;
+  sentenceTemplate?: string | TText;  // Subagent alias (TText version)
   correctAnswers?: string[];
+  correctAnswer?: string;  // Subagent alias (singular form)
   wordBank?: string[];
   translation?: TText | string;
   hint?: TText;
@@ -163,10 +166,13 @@ export interface RPGExercise {
 
 // ── RPG Typing (A2 İleri only) ────────────────────────────────
 export interface TypingMatch {
-  keywords: string[];
-  responseTone: RPGResponseTone;
-  npcResponse: TText;
-  nextNodeId?: string;
+  keywords?: string[];  // Canonical
+  target?: string;      // Subagent alias (single keyword target)
+  hint?: TText;         // Subagent alias (hint text shown to user)
+  responseTone?: RPGResponseTone;
+  npcResponse?: TText;
+  nextNodeId?: string | null;   // Next node (null = end)
+  deductsHeart?: boolean; // Subagent alias
 }
 
 export interface RPGTypingNode {
@@ -178,8 +184,10 @@ export interface RPGTypingNode {
   emoji?: string;
   npcText?: TText;
   text?: TText;
+  prompt?: TText;   // Subagent alias (instructions to user)
   matches: TypingMatch[];
-  fallbackResponse: TText;
+  fallbackResponse?: TText;
+  fallbackNextNodeId?: string | null; // Subagent alias
   isFinal?: boolean;
 }
 
@@ -187,6 +195,7 @@ export interface RPGTypingExercise {
   id: string;
   type: 'rpg_typing';
   scenario?: TText;
+  scenarioTitle?: TText;  // Subagent alias for scenario
   scenarioEmoji?: string;
   nodes: RPGTypingNode[];
   startNodeId?: string;
@@ -225,14 +234,14 @@ export interface Lesson {
 
 // ── Guidebook ───────────────────────────────────────────────────
 export interface UnitGuidebook {
-  title: TText;
-  description: TText;
+  title?: TText;        // Optional — some subagents omit the top-level title/description
+  description?: TText; // Optional
   vocabulary: { word: string; translation: TText }[];
   keyPhrases: { phrase: string; translation: TText }[];
   grammarNotes: {
     title: TText;
     explanation: TText;
-    examples: { tr: string; translation: TText }[];
+    examples?: { tr: string; translation: TText }[];  // Optional — some subagents omit
   }[];
 }
 
@@ -347,7 +356,14 @@ export function getPairTranslation(pair: DragDropPair, locale: string): string {
 /** Get scrambled words from a WordOrderExercise */
 export function getWordOrderWords(ex: WordOrderExercise): string[] {
   if (ex.scrambledWords) return ex.scrambledWords;
-  if (ex.words) return ex.words.map((w) => typeof w === 'string' ? w : w.text);
+  if (ex.words) return ex.words.map((w) => {
+    if (typeof w === 'string') return w;
+    // TText object — extract Turkish form
+    if ('tr' in w && typeof (w as TText).tr === 'string') return (w as TText).tr;
+    // { id?, text } shape
+    if ('text' in w) return (w as { id?: string; text: string }).text;
+    return '';
+  });
   // Fallback: extract from sentence and shuffle
   const sentence = typeof ex.sentence === 'string' ? ex.sentence : (ex.sentence?.tr ?? '');
   return sentence.split(' ').sort(() => Math.random() - 0.5);
@@ -355,8 +371,13 @@ export function getWordOrderWords(ex: WordOrderExercise): string[] {
 
 /** Get correct order from a WordOrderExercise */
 export function getWordOrderCorrect(ex: WordOrderExercise): string[] {
-  if (ex.correctOrder) return ex.correctOrder;
-  if (ex.words) return ex.words.map((w) => typeof w === 'string' ? w : w.text);
+  if (ex.correctOrder) return (ex.correctOrder as Array<string | number>).map(String);
+  if (ex.words) return ex.words.map((w) => {
+    if (typeof w === 'string') return w;
+    if ('tr' in w && typeof (w as TText).tr === 'string') return (w as TText).tr;
+    if ('text' in w) return (w as { id?: string; text: string }).text;
+    return '';
+  });
   const sentence = typeof ex.sentence === 'string' ? ex.sentence : (ex.sentence?.tr ?? '');
   return sentence.split(' ');
 }
@@ -374,13 +395,15 @@ export function getWordOrderTranslation(ex: WordOrderExercise, locale: string): 
 
 /** Get sentence template for FIB */
 export function getFIBTemplate(ex: FIBExercise): string {
-  if (ex.sentenceTemplate) return ex.sentenceTemplate;
+  if (ex.sentenceTemplate) {
+    return typeof ex.sentenceTemplate === 'string' ? ex.sentenceTemplate : ex.sentenceTemplate.tr;
+  }
   if (ex.textParts && ex.textParts.length >= 2) {
     return ex.textParts.join('____');
   }
   const tr = typeof ex.sentence === 'string' ? ex.sentence : (ex.sentence?.tr ?? '');
   if (tr) {
-    const answer = ex.blank?.answer ?? ex.correctAnswers?.[0] ?? ex.missingWord ?? '';
+    const answer = ex.blank?.answer ?? ex.correctAnswer ?? ex.correctAnswers?.[0] ?? ex.missingWord ?? '';
     return tr.replace(answer, '____');
   }
   return '';
@@ -389,6 +412,7 @@ export function getFIBTemplate(ex: FIBExercise): string {
 /** Get correct answers for FIB */
 export function getFIBAnswers(ex: FIBExercise): string[] {
   if (ex.correctAnswers) return ex.correctAnswers;
+  if (ex.correctAnswer) return [ex.correctAnswer];  // Subagent alias (singular)
   if (ex.blank?.answer) return [ex.blank.answer];
   if (ex.missingWord) return [ex.missingWord];
   return [];

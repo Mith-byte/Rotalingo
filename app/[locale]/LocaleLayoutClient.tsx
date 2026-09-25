@@ -22,6 +22,8 @@ export default function LocaleLayoutClient({
   // Detect if we're in a lesson (hide nav for cleaner lesson UX)
   const isLesson = pathname?.includes('/lesson/');
   const isAuth = pathname?.includes('/auth/');
+  const isLanding = pathname?.includes('/landing');
+  const hideChrome = isLesson || isAuth || isLanding;
 
   // RTL locales
   const isRTL = locale === 'ar' || locale === 'fa';
@@ -32,11 +34,11 @@ export default function LocaleLayoutClient({
         className="min-h-screen flex flex-col max-w-md mx-auto relative bg-white text-slate-900"
         dir={isRTL ? 'rtl' : 'ltr'}
       >
-        {/* Top bar — hidden during lesson and auth */}
-        {!isLesson && !isAuth && <TopBar />}
+        {/* Top bar — hidden during lesson, auth, and landing */}
+        {!hideChrome && <TopBar />}
 
         {/* Page content */}
-        <main className={`flex-1 overflow-y-auto ${!isLesson && !isAuth ? 'pt-16 pb-24' : ''}`}>
+        <main className={`flex-1 overflow-y-auto ${!hideChrome ? 'pt-16 pb-24' : ''}`}>
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={pathname}
@@ -51,8 +53,8 @@ export default function LocaleLayoutClient({
           </AnimatePresence>
         </main>
 
-        {/* Bottom navigation — hidden during lesson and auth */}
-        {!isLesson && !isAuth && <BottomNav locale={locale} />}
+        {/* Bottom navigation — hidden during lesson, auth, and landing */}
+        {!hideChrome && <BottomNav locale={locale} />}
       </div>
     </NextIntlClientProvider>
   );

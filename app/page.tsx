@@ -1,6 +1,8 @@
-// app/page.tsx — root redirect to /en
 import { redirect } from 'next/navigation';
 
+// Root: detect browser language, redirect to best locale
 export default function RootPage() {
-  redirect('/en');
+  // For MVP, always redirect to /en landing page.
+  // In production, could detect Accept-Language header server-side.
+  redirect('/en/landing');
 }

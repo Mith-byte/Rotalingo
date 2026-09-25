@@ -69,9 +69,11 @@ export default function UnitCard({
               {level}
             </p>
             <h3 className="font-bold text-slate-900 text-base leading-tight">
-              {name}
+              {nameTr}
             </h3>
-            <p className="text-slate-500 text-sm">{nameTr}</p>
+            {name !== nameTr && (
+              <p className="text-slate-500 text-sm">{name}</p>
+            )}
           </div>
         </div>
 
