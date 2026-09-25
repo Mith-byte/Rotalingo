@@ -47,6 +47,22 @@ import type { Level, Lesson } from './types';
 // ── Combined curriculum ──────────────────────────────────────
 export const curriculum: Level[] = [a1Level, a1IleriLevel, a2Level, a2IleriLevel];
 
+// ── Attach Guidebooks ────────────────────────────────────────
+// Attempt to dynamically attach guidebooks if the file has been generated
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { guidebooks } = require('./curriculum/guidebooks');
+  curriculum.forEach((level) => {
+    level.units.forEach((unit) => {
+      if (guidebooks[unit.id]) {
+        unit.guidebook = guidebooks[unit.id];
+      }
+    });
+  });
+} catch (e) {
+  console.log('Guidebooks not yet available.');
+}
+
 // ── Flat lesson lookup ───────────────────────────────────────
 const allLessons: Lesson[] = curriculum.flatMap((level) =>
   level.units.flatMap((unit) => unit.lessons)

@@ -223,6 +223,19 @@ export interface Lesson {
   exercises: Exercise[];
 }
 
+// ── Guidebook ───────────────────────────────────────────────────
+export interface UnitGuidebook {
+  title: TText;
+  description: TText;
+  vocabulary: { word: string; translation: TText }[];
+  keyPhrases: { phrase: string; translation: TText }[];
+  grammarNotes: {
+    title: TText;
+    explanation: TText;
+    examples: { tr: string; translation: TText }[];
+  }[];
+}
+
 // ── Unit ──────────────────────────────────────────────────────
 export interface Unit {
   id: string;
@@ -234,6 +247,7 @@ export interface Unit {
   emoji: string;
   color?: string;
   themeColor?: string;    // Subagent alias
+  guidebook?: UnitGuidebook;
   lessons: Lesson[];
 }
 

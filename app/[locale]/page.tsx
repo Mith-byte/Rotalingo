@@ -4,8 +4,10 @@ import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { useParams } from 'next/navigation';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useUserStore } from '@/lib/store/userStore';
+import { BookOpen } from 'lucide-react';
+import type { UnitGuidebook } from '@/data/types';
 
 // Dynamic import — curriculum loads only on client after subagents finish.
 // During development we fall back to empty if files aren't ready yet.
@@ -13,6 +15,7 @@ import { curriculum } from '@/data/lessons';
 import type { Level, Unit } from '@/data/types';
 import { isLevelUnlocked, isUnitUnlocked, isLessonUnlocked } from '@/data/types';
 import UnitCard from '@/components/ui/UnitCard';
+import GuidebookModal from '@/components/ui/GuidebookModal';
 
 function tlocale(obj: Record<string, string>, locale: string): string {
   return obj[locale] ?? obj['en'];
@@ -39,6 +42,8 @@ export default function HomePage() {
     () => new Set(completedLessonsArray),
     [completedLessonsArray]
   );
+
+  const [activeGuidebook, setActiveGuidebook] = useState<UnitGuidebook | null>(null);
 
   return (
     <div className="px-4 py-6">
@@ -105,7 +110,20 @@ export default function HomePage() {
                     : "";
 
                 return (
-                  <motion.div key={unit.id} variants={itemVariants}>
+                  <motion.div key={unit.id} variants={itemVariants} className="relative">
+                    {/* Guidebook Button */}
+                    {unit.guidebook && (
+                      <div className="absolute -top-3 right-4 z-20">
+                        <button
+                          onClick={() => setActiveGuidebook(unit.guidebook!)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 rounded-full font-bold text-xs shadow-sm border border-red-200 transition-colors"
+                        >
+                          <BookOpen size={14} />
+                          {t('guidebook') || 'Guidebook'}
+                        </button>
+                      </div>
+                    )}
+                    
                     <UnitCard
                       id={nextLessonToPlay.id}
                       name={localizedName}
@@ -127,6 +145,13 @@ export default function HomePage() {
       })}
 
       <div className="h-4" />
+
+      <GuidebookModal
+        guidebook={activeGuidebook}
+        isOpen={!!activeGuidebook}
+        onClose={() => setActiveGuidebook(null)}
+        locale={locale}
+      />
     </div>
   );
 }
