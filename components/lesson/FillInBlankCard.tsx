@@ -56,19 +56,19 @@ export default function FillInBlankCard({
   return (
     <div className="flex flex-col h-full px-4 py-6 gap-5">
       <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}>
-        <h2 className="text-xl font-bold text-white">{question}</h2>
-        <p className="text-sm text-slate-400 mt-1 italic">"{translation}"</p>
+        <h2 className="text-xl font-bold text-slate-900">{question}</h2>
+        <p className="text-sm text-slate-500 mt-1 italic">"{translation}"</p>
       </motion.div>
 
       {/* Sentence with blank */}
       <div className="glass rounded-2xl px-5 py-4">
-        <p className="text-lg text-white leading-relaxed text-center">
+        <p className="text-lg text-slate-900 leading-relaxed text-center">
           {before}
           <span
             className={cn(
               'inline-block min-w-[80px] border-b-2 mx-1 px-2 py-0.5 rounded-lg text-center font-bold transition-all',
               !selected
-                ? 'border-indigo-500 text-slate-400'
+                ? 'border-indigo-500 text-slate-500'
                 : checked && isCorrect
                 ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300'
                 : checked && !isCorrect
@@ -109,7 +109,7 @@ export default function FillInBlankCard({
                   ? 'bg-red-500/20 border-red-500 text-red-300'
                   : showRight
                   ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
-                  : 'glass border-white/10 text-white hover:border-indigo-500/40'
+                  : 'glass border-slate-200 text-slate-900 hover:border-indigo-500/40'
               )}
             >
               {word}
@@ -127,15 +127,15 @@ export default function FillInBlankCard({
             className={cn(
               'p-4 rounded-2xl',
               isCorrect
-                ? 'bg-emerald-500/15 border border-emerald-500/40'
-                : 'bg-red-500/15 border border-red-500/40'
+                ? 'bg-emerald-50 border border-emerald-200'
+                : 'bg-red-50 border border-red-200'
             )}
           >
-            <p className={cn('font-bold', isCorrect ? 'text-emerald-400' : 'text-red-400')}>
+            <p className={cn('font-bold', isCorrect ? 'text-emerald-700' : 'text-red-700')}>
               {isCorrect ? '✅ Correct!' : '❌ Incorrect'}
             </p>
             {!isCorrect && (
-              <p className="text-slate-300 text-sm mt-1">
+              <p className="text-slate-600 text-sm mt-1">
                 Answer: <strong>{correctAnswers[0]}</strong>
                 {hint && ` — ${hint}`}
               </p>

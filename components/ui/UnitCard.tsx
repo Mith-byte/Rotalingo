@@ -40,14 +40,14 @@ export default function UnitCard({
       whileHover={isLocked ? {} : { scale: 1.02 }}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
       className={cn(
-        'relative overflow-hidden rounded-3xl p-5 glass',
-        isLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+        'relative overflow-hidden rounded-3xl p-5 bg-white border border-slate-200 shadow-sm',
+        isLocked ? 'opacity-60 cursor-not-allowed bg-slate-50' : 'cursor-pointer hover:shadow-md'
       )}
     >
       {/* Gradient background accent */}
       <div
         className={cn(
-          'absolute -top-6 -right-6 w-28 h-28 rounded-full opacity-20 blur-2xl bg-gradient-to-br',
+          'absolute -top-6 -right-6 w-28 h-28 rounded-full opacity-10 blur-2xl bg-gradient-to-br',
           color
         )}
       />
@@ -57,7 +57,7 @@ export default function UnitCard({
           {/* Emoji avatar */}
           <div
             className={cn(
-              'w-14 h-14 rounded-2xl flex items-center justify-center text-3xl bg-gradient-to-br shadow-lg',
+              'w-14 h-14 rounded-2xl flex items-center justify-center text-3xl bg-gradient-to-br shadow-md',
               color
             )}
           >
@@ -65,13 +65,13 @@ export default function UnitCard({
           </div>
 
           <div>
-            <p className="text-xs text-slate-400 font-medium uppercase tracking-widest mb-0.5">
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-widest mb-0.5">
               {level}
             </p>
-            <h3 className="font-bold text-white text-base leading-tight">
+            <h3 className="font-bold text-slate-900 text-base leading-tight">
               {name}
             </h3>
-            <p className="text-slate-400 text-sm">{nameTr}</p>
+            <p className="text-slate-500 text-sm">{nameTr}</p>
           </div>
         </div>
 
@@ -79,7 +79,7 @@ export default function UnitCard({
           {isLocked ? (
             <Lock size={18} />
           ) : completedCount === lessonCount && lessonCount > 0 ? (
-            <CheckCircle size={18} className="text-emerald-400" />
+            <CheckCircle size={18} className="text-emerald-500" />
           ) : (
             <ChevronRight size={18} />
           )}
@@ -89,13 +89,13 @@ export default function UnitCard({
       {/* Progress bar */}
       {!isLocked && (
         <div className="relative z-10 mt-4">
-          <div className="flex justify-between text-xs text-slate-400 mb-1.5">
-            <span>
+          <div className="flex justify-between text-xs text-slate-500 mb-1.5">
+            <span className="font-medium">
               {completedCount}/{lessonCount} lessons
             </span>
-            <span>{Math.round(progress * 100)}%</span>
+            <span className="font-bold text-slate-700">{Math.round(progress * 100)}%</span>
           </div>
-          <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+          <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden shadow-inner border border-slate-200/50">
             <motion.div
               className={cn('h-full rounded-full bg-gradient-to-r', color)}
               initial={{ width: 0 }}

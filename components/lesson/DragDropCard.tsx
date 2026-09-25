@@ -65,7 +65,7 @@ export default function DragDropCard({ question, pairs, onComplete }: DragDropCa
       <motion.h2
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-xl font-bold text-white mb-6"
+        className="text-xl font-bold text-slate-900 mb-6"
       >
         {question}
       </motion.h2>
@@ -73,7 +73,7 @@ export default function DragDropCard({ question, pairs, onComplete }: DragDropCa
       <div className="grid grid-cols-2 gap-3">
         {/* Left column — Turkish */}
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1">
+          <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-1">
             Turkish
           </p>
           {leftItems.map((item, i) => {
@@ -94,14 +94,14 @@ export default function DragDropCard({ question, pairs, onComplete }: DragDropCa
                 onClick={() => handleLeftClick(item.id)}
                 disabled={isMatched}
                 className={cn(
-                  'text-left px-3 py-3 rounded-xl border-2 text-sm font-semibold transition-all no-select',
+                  'text-left px-3 py-3 rounded-xl border-2 text-sm font-bold transition-all no-select shadow-sm',
                   isMatched
-                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 opacity-70'
+                    ? 'bg-emerald-50 border-emerald-500 text-emerald-800 opacity-70'
                     : isSelected
-                    ? 'bg-indigo-500/30 border-indigo-500 text-white'
+                    ? 'bg-indigo-50 border-indigo-500 text-indigo-900'
                     : isWrong
-                    ? 'bg-red-500/20 border-red-500 text-red-300'
-                    : 'glass border-white/10 text-white hover:border-indigo-500/40'
+                    ? 'bg-red-50 border-red-500 text-red-800'
+                    : 'bg-white border-slate-200 text-slate-800 hover:border-indigo-400 hover:bg-slate-50'
                 )}
               >
                 {item.emoji && <span className="mr-1.5">{item.emoji}</span>}
@@ -114,7 +114,7 @@ export default function DragDropCard({ question, pairs, onComplete }: DragDropCa
 
         {/* Right column — Translations */}
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-bold text-violet-400 uppercase tracking-widest mb-1">
+          <p className="text-xs font-bold text-violet-600 uppercase tracking-widest mb-1">
             Translation
           </p>
           {rightItems.map((item, i) => {
@@ -129,12 +129,12 @@ export default function DragDropCard({ question, pairs, onComplete }: DragDropCa
                 onClick={() => handleRightClick(item.id)}
                 disabled={isMatched || !selectedLeft}
                 className={cn(
-                  'text-left px-3 py-3 rounded-xl border-2 text-sm font-semibold transition-all no-select',
+                  'text-left px-3 py-3 rounded-xl border-2 text-sm font-bold transition-all no-select shadow-sm',
                   isMatched
-                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 opacity-70'
+                    ? 'bg-emerald-50 border-emerald-500 text-emerald-800 opacity-70'
                     : selectedLeft
-                    ? 'glass border-violet-500/50 text-white hover:border-violet-400 hover:bg-violet-500/10 cursor-pointer'
-                    : 'glass border-white/10 text-slate-400'
+                    ? 'bg-white border-violet-500 text-slate-800 hover:bg-violet-50 cursor-pointer'
+                    : 'bg-slate-50 border-slate-200 text-slate-500'
                 )}
               >
                 {item.translation}

@@ -64,8 +64,8 @@ export default function RPGTypingCard({
           🎭
         </motion.div>
         <div>
-          <h2 className="text-2xl font-extrabold text-white">{t('scene_complete')}</h2>
-          <p className="text-slate-400 mt-2 text-base">{npcText}</p>
+          <h2 className="text-2xl font-extrabold text-slate-900">{t('scene_complete')}</h2>
+          <p className="text-slate-500 mt-2 text-base">{npcText}</p>
         </div>
         <motion.button
           whileTap={{ scale: 0.95 }}
@@ -149,7 +149,7 @@ export default function RPGTypingCard({
           <div className="flex flex-col gap-0.5 flex-1">
             <span className="text-xs font-bold text-violet-400">{npcName}</span>
             <div className="glass rounded-2xl rounded-tl-none px-4 py-3">
-              <p className="text-white text-base leading-relaxed">{npcText}</p>
+              <p className="text-slate-900 text-base leading-relaxed">{npcText}</p>
             </div>
           </div>
         </motion.div>
@@ -207,7 +207,7 @@ export default function RPGTypingCard({
           animate={{ opacity: 1, y: 0 }}
           className="mt-auto pt-4"
         >
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
             {t('choose')} (Turkish)
           </p>
           <div className="relative">
@@ -223,7 +223,7 @@ export default function RPGTypingCard({
               }}
               placeholder="Türkçe cevabınızı yazın..."
               rows={3}
-              className="w-full px-4 py-3 pr-14 bg-slate-900 border border-white/10 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors resize-none"
+              className="w-full px-4 py-3 pr-14 bg-slate-900 border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors resize-none"
             />
             <motion.button
               whileTap={{ scale: 0.9 }}
@@ -231,7 +231,7 @@ export default function RPGTypingCard({
               disabled={!inputValue.trim()}
               className="absolute right-3 bottom-3 w-9 h-9 bg-indigo-600 disabled:opacity-30 rounded-xl flex items-center justify-center transition-opacity"
             >
-              <Send size={16} className="text-white" />
+              <Send size={16} className="text-slate-900" />
             </motion.button>
           </div>
           <p className="text-[10px] text-slate-500 mt-1 text-center">
@@ -250,7 +250,7 @@ export default function RPGTypingCard({
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={handleAdvance}
-              className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl text-base shadow-lg shadow-emerald-500/25"
+              className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-slate-900 font-bold rounded-2xl text-base shadow-lg shadow-emerald-500/25"
             >
               Continue →
             </motion.button>

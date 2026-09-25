@@ -49,10 +49,10 @@ export default function HomePage() {
         transition={{ duration: 0.4 }}
         className="mb-8"
       >
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">
+        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
           {t('title')} 🇹🇷
         </h1>
-        <p className="text-slate-400 mt-1 text-base">{t('subtitle')}</p>
+        <p className="text-slate-600 mt-1 text-base">{t('subtitle')}</p>
       </motion.div>
 
       {/* Levels */}
@@ -63,14 +63,14 @@ export default function HomePage() {
           <div key={level.id} className="mb-10">
             {/* Level divider */}
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex-1 h-px bg-slate-800" />
+              <div className="flex-1 h-px bg-slate-200" />
               <div className={`flex items-center gap-2 ${!levelUnlocked ? 'opacity-40' : ''}`}>
                 {!levelUnlocked && <span className="text-sm">🔒</span>}
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
                   {t('level')} · {level.code}
                 </span>
               </div>
-              <div className="flex-1 h-px bg-slate-800" />
+              <div className="flex-1 h-px bg-slate-200" />
             </div>
 
             {/* Units in level */}

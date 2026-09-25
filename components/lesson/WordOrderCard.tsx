@@ -63,8 +63,8 @@ export default function WordOrderCard({
   return (
     <div className="flex flex-col h-full px-4 py-6 gap-5">
       <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}>
-        <h2 className="text-xl font-bold text-white">{question}</h2>
-        <p className="text-sm text-slate-400 mt-1 italic">"{translation}"</p>
+        <h2 className="text-xl font-bold text-slate-900">{question}</h2>
+        <p className="text-sm text-slate-500 mt-1 italic">"{translation}"</p>
       </motion.div>
 
       {/* Answer tray */}
@@ -95,9 +95,9 @@ export default function WordOrderCard({
               className={cn(
                 'px-3 py-1.5 rounded-xl text-sm font-semibold no-select',
                 checked && isCorrect
-                  ? 'bg-emerald-600 text-white'
+                  ? 'bg-emerald-600 text-slate-900'
                   : checked && !isCorrect
-                  ? 'bg-red-600 text-white'
+                  ? 'bg-red-600 text-slate-900'
                   : 'bg-indigo-600 text-white hover:bg-indigo-500'
               )}
             >
@@ -118,7 +118,7 @@ export default function WordOrderCard({
               exit={{ scale: 0, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 400, damping: 20 }}
               onClick={() => handlePick(item)}
-              className="px-3 py-1.5 glass border border-white/10 rounded-xl text-sm font-semibold text-white hover:border-indigo-500/50 no-select"
+              className="px-3 py-1.5 glass border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 hover:border-indigo-500/50 no-select"
             >
               {item.word}
             </motion.button>
@@ -135,15 +135,15 @@ export default function WordOrderCard({
             className={cn(
               'p-4 rounded-2xl',
               isCorrect
-                ? 'bg-emerald-500/15 border border-emerald-500/40'
-                : 'bg-red-500/15 border border-red-500/40'
+                ? 'bg-emerald-50 border border-emerald-200'
+                : 'bg-red-50 border border-red-200'
             )}
           >
-            <p className={cn('font-bold', isCorrect ? 'text-emerald-400' : 'text-red-400')}>
+            <p className={cn('font-bold', isCorrect ? 'text-emerald-700' : 'text-red-700')}>
               {isCorrect ? '✅ Correct!' : '❌ Not quite'}
             </p>
             {!isCorrect && (
-              <p className="text-slate-300 text-sm mt-1">
+              <p className="text-slate-600 text-sm mt-1">
                 Correct: <strong>{correctOrder.join(' ')}</strong>
               </p>
             )}
@@ -158,7 +158,7 @@ export default function WordOrderCard({
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={handleReset}
-              className="px-4 py-3 glass border border-white/10 text-slate-400 rounded-2xl text-sm font-semibold"
+              className="px-4 py-3 glass border border-slate-200 text-slate-500 rounded-2xl text-sm font-semibold"
             >
               Reset
             </motion.button>

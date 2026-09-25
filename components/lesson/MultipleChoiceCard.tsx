@@ -49,7 +49,7 @@ export default function MultipleChoiceCard({
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h2 className="text-xl font-bold text-white leading-snug">{question}</h2>
+        <h2 className="text-xl font-bold text-slate-900 leading-snug">{question}</h2>
       </motion.div>
 
       {/* Options */}
@@ -80,14 +80,14 @@ export default function MultipleChoiceCard({
                 'w-full text-left px-5 py-4 rounded-2xl font-semibold',
                 'border-2 transition-all duration-200 focus:outline-none no-select',
                 !isSelected && !showActualCorrect
-                  ? 'glass border-white/10 text-white hover:border-indigo-500/50'
+                  ? 'bg-white border-slate-200 text-slate-900 hover:border-indigo-400 hover:bg-slate-50 shadow-sm'
                   : '',
                 showCorrect
-                  ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-lg shadow-emerald-500/20'
+                  ? 'bg-emerald-100 border-emerald-500 text-emerald-800 shadow-md shadow-emerald-500/10'
                   : '',
-                showIncorrect ? 'bg-red-500/20 border-red-500 text-red-300' : '',
+                showIncorrect ? 'bg-red-100 border-red-500 text-red-800 shadow-sm' : '',
                 showActualCorrect
-                  ? 'bg-emerald-500/10 border-emerald-500/60 text-emerald-400'
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
                   : ''
               )}
             >
@@ -97,9 +97,9 @@ export default function MultipleChoiceCard({
                     <span className="text-2xl flex-shrink-0">{option.emoji}</span>
                   )}
                   <div className="min-w-0">
-                    <p className="text-base">{option.primary}</p>
+                    <p className="text-base font-bold">{option.primary}</p>
                     {option.secondary && (
-                      <p className="text-xs text-slate-400 mt-0.5 font-normal">
+                      <p className="text-xs text-slate-500 mt-0.5 font-normal">
                         {option.secondary}
                       </p>
                     )}
@@ -132,20 +132,20 @@ export default function MultipleChoiceCard({
             className={cn(
               'mt-6 p-4 rounded-2xl',
               answerState === 'correct'
-                ? 'bg-emerald-500/15 border border-emerald-500/40'
-                : 'bg-red-500/15 border border-red-500/40'
+                ? 'bg-emerald-50 border border-emerald-200'
+                : 'bg-red-50 border border-red-200'
             )}
           >
             <p
               className={cn(
                 'font-bold text-base',
-                answerState === 'correct' ? 'text-emerald-400' : 'text-red-400'
+                answerState === 'correct' ? 'text-emerald-700' : 'text-red-700'
               )}
             >
               {answerState === 'correct' ? t('correct') : t('incorrect')}
             </p>
             {answerState === 'incorrect' && hint && (
-              <p className="text-slate-400 text-sm mt-1">{hint}</p>
+              <p className="text-slate-600 text-sm mt-1">{hint}</p>
             )}
           </motion.div>
         )}

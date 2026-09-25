@@ -71,8 +71,8 @@ export default function RPGDialogueCard({
           🎭
         </motion.div>
         <div>
-          <h2 className="text-2xl font-extrabold text-white">{t('scene_complete')}</h2>
-          <p className="text-slate-400 mt-2 text-base">{npcText}</p>
+          <h2 className="text-2xl font-extrabold text-slate-900">{t('scene_complete')}</h2>
+          <p className="text-slate-500 mt-2 text-base">{npcText}</p>
         </div>
         <motion.button
           whileTap={{ scale: 0.95 }}
@@ -153,7 +153,7 @@ export default function RPGDialogueCard({
           <div className="flex flex-col gap-0.5 flex-1">
             <span className="text-xs font-bold text-violet-400">{npcName}</span>
             <div className="glass rounded-2xl rounded-tl-none px-4 py-3">
-              <p className="text-white text-base leading-relaxed">{npcText}</p>
+              <p className="text-slate-900 text-base leading-relaxed">{npcText}</p>
             </div>
           </div>
         </motion.div>
@@ -193,7 +193,7 @@ export default function RPGDialogueCard({
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-xs font-bold text-slate-400 uppercase tracking-widest"
+          className="text-xs font-bold text-slate-500 uppercase tracking-widest"
         >
           {t('choose')}
         </motion.p>
@@ -221,7 +221,7 @@ export default function RPGDialogueCard({
               className={cn(
                 'w-full text-left px-4 py-3.5 rounded-2xl border-2 transition-all no-select focus:outline-none flex-shrink-0',
                 !isSelected
-                  ? 'glass border-white/10 text-white hover:border-indigo-500/50'
+                  ? 'glass border-slate-200 text-slate-900 hover:border-indigo-500/50'
                   : option.deductsHeart
                   ? 'bg-red-500/20 border-red-500 text-red-200'
                   : option.responseTone === 'alternative'
@@ -238,7 +238,7 @@ export default function RPGDialogueCard({
                     <span>🔄</span>
                   )}
                 </div>
-                {hintText && <span className="text-xs text-slate-400">{hintText}</span>}
+                {hintText && <span className="text-xs text-slate-500">{hintText}</span>}
               </div>
             </motion.button>
           );
@@ -257,7 +257,7 @@ export default function RPGDialogueCard({
               whileTap={{ scale: 0.95 }}
               onClick={handleAdvance}
               className={cn(
-                'w-full py-4 font-bold rounded-2xl text-base text-white shadow-lg transition-colors flex-shrink-0',
+                'w-full py-4 font-bold rounded-2xl text-base text-slate-900 shadow-lg transition-colors flex-shrink-0',
                 selectedOption.isCorrect
                   ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/25'
                   : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/25'

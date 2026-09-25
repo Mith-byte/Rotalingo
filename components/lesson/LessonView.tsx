@@ -63,20 +63,26 @@ export default function LessonView({ lesson, locale }: LessonViewProps) {
   const progress = totalExercises > 0 ? completedCount / totalExercises : 0;
   const currentExercise = lesson.exercises[exerciseIndex];
 
-  // Shuffle MC options once per exercise (keyed by index)
+  // Map options first to resolve isCorrect, then shuffle
   const shuffledOptions = useMemo<DisplayOption[] | null>(() => {
     const ex = lesson.exercises[exerciseIndex];
     if (!ex || (ex.type !== 'multiple_choice' && ex.type !== 'image_match')) return null;
     const mcEx = ex as MCExercise;
-    return shuffle(mcEx.options).map((opt) => ({
-      id: opt.id ?? String(Math.random()),
-      primary: getMCOptionPrimary(opt, locale),
-      secondary: getMCOptionTranslation(opt, locale),
-      emoji: opt.emoji,
-      isCorrect: opt.isCorrect ?? false,
-    }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exerciseIndex, locale]);
+
+    const mapped = mcEx.options.map((opt, i) => {
+      // If subagent used correctAnswerIndex, fallback to matching original index
+      const isCorrect = opt.isCorrect ?? (mcEx.correctAnswerIndex === i);
+      return {
+        id: opt.id ?? crypto.randomUUID(),
+        primary: getMCOptionPrimary(opt, locale),
+        secondary: getMCOptionTranslation(opt, locale),
+        emoji: opt.emoji,
+        isCorrect,
+      };
+    });
+
+    return shuffle(mapped);
+  }, [exerciseIndex, lesson.exercises, locale]);
 
   const advance = useCallback(() => {
     setCompletedCount((c) => c + 1);
@@ -94,8 +100,12 @@ export default function LessonView({ lesson, locale }: LessonViewProps) {
   const handleMCSelect = useCallback((id: string, isCorrect: boolean) => {
     setSelected(id);
     setAnswerState(isCorrect ? 'correct' : 'incorrect');
-    if (!isCorrect) loseHeart();
-  }, [loseHeart]);
+    if (isCorrect) {
+      setTimeout(advance, 600);
+    } else {
+      loseHeart();
+    }
+  }, [loseHeart, advance]);
 
   const handleSubCorrect = useCallback(() => {
     setAnswerState('correct');
@@ -110,6 +120,39 @@ export default function LessonView({ lesson, locale }: LessonViewProps) {
   const handleDragComplete = useCallback(() => advance(), [advance]);
   const handleRPGWrong = useCallback(() => loseHeart(), [loseHeart]);
 
+  // ── Game Over screen (Out of Hearts) ──────────────────────────
+  if (hearts <= 0) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="flex flex-col items-center justify-center min-h-screen px-6 py-12 text-center gap-6"
+      >
+        <motion.div
+          animate={{ scale: [1, 1.2, 1], rotate: [0, -5, 5, 0] }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="text-8xl"
+        >
+          💔
+        </motion.div>
+        <div>
+          <h1 className="text-3xl font-extrabold text-white">Out of Hearts!</h1>
+          <p className="text-slate-400 mt-2">You made too many mistakes. Try again.</p>
+        </div>
+        <motion.button
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => router.push(`/${locale}`)}
+          className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl text-lg shadow-lg"
+        >
+          Return Home
+        </motion.button>
+      </motion.div>
+    );
+  }
+
   // ── Lesson complete screen ────────────────────────────────────
   if (isComplete) {
     const titleObj = lesson.title ?? lesson.name;
@@ -122,7 +165,7 @@ export default function LessonView({ lesson, locale }: LessonViewProps) {
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="flex flex-col items-center justify-center min-h-screen px-6 py-12 text-center gap-6"
+        className="flex flex-col items-center justify-center min-h-screen px-6 py-12 text-center gap-6 bg-white"
       >
         <motion.div
           animate={{ scale: [1, 1.4, 1, 1.2, 1], rotate: [0, -10, 10, -5, 0] }}
@@ -132,20 +175,20 @@ export default function LessonView({ lesson, locale }: LessonViewProps) {
           🏆
         </motion.div>
         <div>
-          <h1 className="text-3xl font-extrabold text-white">{t('complete_title')}</h1>
-          <p className="text-slate-400 mt-2">{lessonTitle}</p>
+          <h1 className="text-3xl font-extrabold text-slate-900">{t('complete_title')}</h1>
+          <p className="text-slate-500 mt-2">{lessonTitle}</p>
         </div>
         <div className="flex gap-4 w-full">
           {[
-            { value: `+${getLessonXP(lesson)}`, label: t('complete_xp'), color: 'text-indigo-400' },
-            { value: `+${getLessonCoins(lesson)}`, label: t('complete_coins'), color: 'text-cyan-400' },
-          ].map(({ value, label, color }, i) => (
+            { value: `+${getLessonXP(lesson)}`, label: t('complete_xp'), color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100' },
+            { value: `+${getLessonCoins(lesson)}`, label: t('complete_coins'), color: 'text-cyan-600', bg: 'bg-cyan-50 border-cyan-100' },
+          ].map(({ value, label, color, bg }, i) => (
             <motion.div
               key={label}
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 + i * 0.1 }}
-              className="flex-1 glass rounded-2xl p-4 text-center"
+              className={`flex-1 rounded-2xl p-4 text-center border ${bg}`}
             >
               <p className={`text-3xl font-extrabold ${color}`}>{value}</p>
               <p className="text-xs text-slate-400 mt-1 font-medium uppercase tracking-wide">{label}</p>
@@ -276,13 +319,13 @@ export default function LessonView({ lesson, locale }: LessonViewProps) {
     currentExercise?.type === 'rpg_typing';
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950">
+    <div className="flex flex-col min-h-screen bg-white text-slate-900">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+      <div className="flex items-center gap-3 px-4 pt-4 pb-3 bg-red-600 shadow-sm z-10">
         <motion.button
           whileTap={{ scale: 0.85 }}
           onClick={() => router.push(`/${locale}`)}
-          className="w-9 h-9 rounded-xl glass flex items-center justify-center text-slate-400 hover:text-white transition-colors flex-shrink-0"
+          className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors flex-shrink-0"
         >
           <X size={18} />
         </motion.button>
@@ -291,7 +334,7 @@ export default function LessonView({ lesson, locale }: LessonViewProps) {
           <ProgressBar progress={progress} />
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          <Heart size={18} className="text-red-500" fill="#ef4444" />
+          <Heart size={18} className="text-white" fill="white" />
           <span className="font-bold text-sm text-white tabular-nums">{hearts}</span>
         </div>
       </div>

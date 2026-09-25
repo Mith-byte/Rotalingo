@@ -29,7 +29,7 @@ export default function LocaleLayoutClient({
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
       <div
-        className="min-h-screen flex flex-col max-w-md mx-auto relative bg-slate-950"
+        className="min-h-screen flex flex-col max-w-md mx-auto relative bg-white text-slate-900"
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         {/* Top bar — hidden during lesson and auth */}

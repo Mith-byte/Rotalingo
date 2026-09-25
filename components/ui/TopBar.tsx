@@ -9,7 +9,7 @@ export default function TopBar() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 max-w-md mx-auto">
-      <div className="flex items-center justify-between px-4 py-3 glass border-b border-white/5">
+      <div className="flex items-center justify-between px-4 py-3 bg-red-600 shadow-sm border-b border-red-700">
         {/* Streak */}
         <motion.div
           className="flex items-center gap-1.5"
@@ -17,8 +17,8 @@ export default function TopBar() {
         >
           <Flame
             size={22}
-            className={streakCount > 0 ? 'text-orange-400' : 'text-slate-500'}
-            fill={streakCount > 0 ? '#fb923c' : 'none'}
+            className={streakCount > 0 ? 'text-yellow-300' : 'text-red-300'}
+            fill={streakCount > 0 ? 'currentColor' : 'none'}
           />
           <span className="font-bold text-sm tabular-nums text-white">
             {streakCount}
@@ -27,7 +27,7 @@ export default function TopBar() {
 
         {/* Logo */}
         <span className="font-bold text-lg tracking-tight text-white">
-          Rota<span className="text-indigo-400">lingo</span>
+          Rota<span className="text-red-200">lingo</span>
         </span>
 
         <div className="flex items-center gap-4">
@@ -36,7 +36,7 @@ export default function TopBar() {
             className="flex items-center gap-1.5"
             whileTap={{ scale: 0.9 }}
           >
-            <Gem size={20} className="text-cyan-400" fill="#22d3ee" />
+            <Gem size={20} className="text-cyan-200" fill="currentColor" />
             <span className="font-bold text-sm tabular-nums text-white">
               {coins}
             </span>
@@ -53,14 +53,14 @@ export default function TopBar() {
                 initial={false}
                 animate={{
                   scale: i < hearts ? 1 : 0.7,
-                  opacity: i < hearts ? 1 : 0.3,
+                  opacity: i < hearts ? 1 : 0.4,
                 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               >
                 <Heart
                   size={16}
-                  className="text-red-500"
-                  fill={i < hearts ? '#ef4444' : 'none'}
+                  className="text-white"
+                  fill={i < hearts ? 'white' : 'none'}
                 />
               </motion.div>
             ))}

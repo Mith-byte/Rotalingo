@@ -24,7 +24,7 @@ export default function BottomNav({ locale }: BottomNavProps) {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 max-w-md mx-auto pb-safe">
-      <div className="flex items-center justify-around px-2 py-2 glass border-t border-white/5">
+      <div className="flex items-center justify-around px-2 py-2 bg-red-600 shadow-lg border-t border-red-700">
         {navItems.map(({ id, icon: Icon, href }) => {
           const fullHref = `/${locale}${href}`;
           const isActive = pathname === fullHref || (href === '' && pathname === `/${locale}`);
@@ -39,7 +39,7 @@ export default function BottomNav({ locale }: BottomNavProps) {
                   {isActive && (
                     <motion.div
                       layoutId="nav-pill"
-                      className="absolute inset-0 -m-2 bg-indigo-500/20 rounded-xl"
+                      className="absolute inset-0 -m-2 bg-white/20 rounded-xl"
                       transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                     />
                   )}
@@ -47,7 +47,7 @@ export default function BottomNav({ locale }: BottomNavProps) {
                     size={24}
                     className={clsx(
                       'transition-colors relative z-10',
-                      isActive ? 'text-indigo-400' : 'text-slate-500'
+                      isActive ? 'text-white' : 'text-red-200'
                     )}
                     strokeWidth={isActive ? 2.5 : 1.8}
                   />
@@ -55,7 +55,7 @@ export default function BottomNav({ locale }: BottomNavProps) {
                 <span
                   className={clsx(
                     'text-[10px] font-medium transition-colors',
-                    isActive ? 'text-indigo-400' : 'text-slate-500'
+                    isActive ? 'text-white' : 'text-red-200'
                   )}
                 >
                   {t(id)}
