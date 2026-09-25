@@ -44,6 +44,7 @@ export default function SignupPage() {
           display_name: displayName,
           native_language: nativeLang,
         },
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
       },
     });
 
@@ -77,11 +78,9 @@ export default function SignupPage() {
         <div className="w-20 h-20 bg-red-50 border border-red-100 rounded-full flex items-center justify-center">
           <CheckCircle size={40} className="text-red-600" />
         </div>
-        <h2 className="text-2xl font-extrabold text-slate-900">Check your email!</h2>
+        <h2 className="text-2xl font-extrabold text-slate-900">{t('verify_title')}</h2>
         <p className="text-slate-500 max-w-xs">
-          We sent a confirmation link to{' '}
-          <strong className="text-slate-900">{email}</strong>.
-          Click it to activate your account and start learning Turkish!
+          {t('verify_desc', { email })}
         </p>
         <Link
           href={`/${nativeLang}/login`}

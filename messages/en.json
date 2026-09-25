@@ -44,7 +44,9 @@
     "native_language": "Your Native Language",
     "have_account": "Already have an account?",
     "no_account": "Don't have an account?",
-    "or": "or"
+    "or": "or",
+    "verify_title": "Registration successful!",
+    "verify_desc": "Please click the confirmation link sent to {email} to activate your account."
   },
   "languages": {
     "en": "English",
