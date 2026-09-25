@@ -19,11 +19,15 @@ export default function LocaleLayoutClient({
 }: LocaleLayoutClientProps) {
   const pathname = usePathname();
 
-  // Detect if we're in a lesson (hide nav for cleaner lesson UX)
+  // Detect if we're in a lesson, auth page, or landing page (hide nav)
   const isLesson = pathname?.includes('/lesson/');
-  const isAuth = pathname?.includes('/auth/');
-  const isLanding = pathname?.includes('/landing');
-  const hideChrome = isLesson || isAuth || isLanding;
+  const isAuth = pathname?.includes('/login') || pathname?.includes('/register');
+  const isDashboard = pathname?.includes('/dashboard');
+  const isLanding = !isDashboard && !isLesson && !isAuth;
+  
+  // hideChrome is basically true for anything that ISN'T the dashboard or profile/leaderboard
+  // For MVP, since we only have dashboard:
+  const hideChrome = !isDashboard;
 
   // RTL locales
   const isRTL = locale === 'ar' || locale === 'fa';

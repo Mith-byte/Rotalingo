@@ -138,14 +138,14 @@ export default function LoginPage() {
 
         <p className="text-center text-slate-500 text-sm">
           {t('no_account')}{' '}
-          <Link href={`/${locale}/auth/signup`} className="text-red-600 font-semibold hover:text-red-500">
+          <Link href={`/${locale}/register`} className="text-red-600 font-semibold hover:text-red-500">
             {t('signup')}
           </Link>
         </p>
       </motion.div>
 
       {/* Back to landing */}
-      <Link href={`/${locale}/landing`} className="mt-6 text-slate-400 text-sm hover:text-slate-600 transition-colors">
+      <Link href={`/${locale}`} className="mt-6 text-slate-400 text-sm hover:text-slate-600 transition-colors">
         ← Back to home
       </Link>
     </div>

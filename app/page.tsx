@@ -4,5 +4,5 @@ import { redirect } from 'next/navigation';
 export default function RootPage() {
   // For MVP, always redirect to /en landing page.
   // In production, could detect Accept-Language header server-side.
-  redirect('/en/landing');
+  redirect('/en');
 }

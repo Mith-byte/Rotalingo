@@ -82,7 +82,7 @@ export default function SignupPage() {
           Click it to activate your account and start learning Turkish!
         </p>
         <Link
-          href={`/${nativeLang}/auth/login`}
+          href={`/${nativeLang}/login`}
           className="px-8 py-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-2xl text-base shadow-md transition-colors"
         >
           {t('login')}
@@ -213,14 +213,14 @@ export default function SignupPage() {
 
         <p className="text-center text-slate-500 text-sm">
           {t('have_account')}{' '}
-          <Link href={`/${locale}/auth/login`} className="text-red-600 font-semibold hover:text-red-500">
+          <Link href={`/${locale}/login`} className="text-red-600 font-semibold hover:text-red-500">
             {t('login')}
           </Link>
         </p>
       </motion.div>
 
       {/* Back to landing */}
-      <Link href={`/${locale}/landing`} className="mt-6 text-slate-400 text-sm hover:text-slate-600 transition-colors">
+      <Link href={`/${locale}`} className="mt-6 text-slate-400 text-sm hover:text-slate-600 transition-colors">
         ← Back to home
       </Link>
     </div>

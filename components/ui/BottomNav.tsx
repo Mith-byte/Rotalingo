@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 import { clsx } from 'clsx';
 
 const navItems = [
-  { id: 'home', icon: Home, href: '' },
+  { id: 'home', icon: Home, href: '/dashboard' },
   { id: 'leaderboard', icon: Trophy, href: '/leaderboard' },
   { id: 'profile', icon: User, href: '/profile' },
   { id: 'store', icon: ShoppingBag, href: '/store' },
@@ -27,7 +27,7 @@ export default function BottomNav({ locale }: BottomNavProps) {
       <div className="flex items-center justify-around px-2 py-2 bg-red-600 shadow-lg border-t border-red-700">
         {navItems.map(({ id, icon: Icon, href }) => {
           const fullHref = `/${locale}${href}`;
-          const isActive = pathname === fullHref || (href === '' && pathname === `/${locale}`);
+          const isActive = pathname === fullHref || (href === '/dashboard' && pathname === `/${locale}`);
 
           return (
             <Link key={id} href={fullHref} className="relative flex-1">
