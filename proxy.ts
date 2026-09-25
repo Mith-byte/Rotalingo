@@ -30,8 +30,37 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // Refresh the session if expired
-  await supabase.auth.getUser();
+  // Refresh the session if expired and get user
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // ── Route Protection ────────────────────────────────────────
+  const { pathname } = request.nextUrl;
+  let pathWithoutLocale = pathname;
+  let currentLocale = routing.defaultLocale;
+
+  for (const loc of routing.locales) {
+    if (pathname === `/${loc}` || pathname.startsWith(`/${loc}/`)) {
+      currentLocale = loc;
+      pathWithoutLocale = pathname.replace(`/${loc}`, '') || '/';
+      break;
+    }
+  }
+
+  const isDashboardOrLesson = pathWithoutLocale.startsWith('/dashboard') || pathWithoutLocale.startsWith('/lesson');
+  const isAuthPage = pathWithoutLocale.startsWith('/login') || pathWithoutLocale.startsWith('/register');
+  const isLandingPage = pathWithoutLocale === '/';
+
+  if (!user && isDashboardOrLesson) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${currentLocale}/login`;
+    return NextResponse.redirect(url);
+  }
+
+  if (user && (isAuthPage || isLandingPage)) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${currentLocale}/dashboard`;
+    return NextResponse.redirect(url);
+  }
 
   // ── i18n routing ────────────────────────────────────────────
   const intlResponse = intlMiddleware(request);
