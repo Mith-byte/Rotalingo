@@ -43,6 +43,7 @@ export default function SignupPage() {
         data: {
           display_name: displayName,
           native_language: nativeLang,
+          locale: nativeLang, // Added for Supabase Go Templates
         },
         emailRedirectTo: `${window.location.origin}/auth/confirm`,
       },
