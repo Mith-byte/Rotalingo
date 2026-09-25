@@ -87,10 +87,9 @@ export default function HomePage() {
                   completedLessons.has(l.id)
                 ).length;
 
-                // First unlocked lesson in this unit
-                const firstUnlockedLesson = unit.lessons.find((l) =>
-                  isLessonUnlocked(l.id, unit, completedLessons)
-                );
+                // The next lesson to play is simply the first uncompleted lesson
+                // Since progression is strictly linear, this is exactly unit.lessons[completedCount]
+                const nextLessonToPlay = unit.lessons[completedCount] ?? unit.lessons[unit.lessons.length - 1];
 
                 // Handle alias and type combinations safely
                 const unitName = unit.name ?? unit.title;
@@ -108,7 +107,7 @@ export default function HomePage() {
                 return (
                   <motion.div key={unit.id} variants={itemVariants}>
                     <UnitCard
-                      id={firstUnlockedLesson?.id ?? unit.lessons[0].id}
+                      id={nextLessonToPlay.id}
                       name={localizedName}
                       nameTr={turkishName}
                       emoji={unit.emoji}
