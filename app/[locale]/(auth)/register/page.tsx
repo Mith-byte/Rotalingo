@@ -24,7 +24,9 @@ export default function SignupPage() {
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [nativeLang, setNativeLang] = useState<'en' | 'ar' | 'fa' | 'ru'>('en');
+  const [nativeLang, setNativeLang] = useState<'en' | 'ar' | 'fa' | 'ru'>(
+    (locale as 'en' | 'ar' | 'fa' | 'ru') || 'en'
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);

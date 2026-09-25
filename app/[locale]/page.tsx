@@ -2,67 +2,62 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   BookOpen,
-  Heart,
   Flame,
   Gamepad2,
   Globe,
-  MapPin,
-  CheckCircle,
   ChevronRight,
-  Star,
-  Users,
 } from 'lucide-react';
-
-const features = [
-  {
-    icon: BookOpen,
-    title: 'Guidebooks for Every Unit',
-    description:
-      'Before each lesson, read a clear, concise guide with vocabulary, key phrases, and survival grammar — no textbook needed.',
-    color: 'bg-red-50 text-red-600 border-red-100',
-  },
-  {
-    icon: Flame,
-    title: 'Gamified Streaks & Hearts',
-    description:
-      'Stay motivated with daily streaks, hearts, and coins. Lose a heart for mistakes, earn XP for every lesson you complete.',
-    color: 'bg-orange-50 text-orange-600 border-orange-100',
-  },
-  {
-    icon: Gamepad2,
-    title: 'Scenario-Based Role-Play',
-    description:
-      'Practice real-life conversations: negotiate at the market, order at a café, ask for directions — with branching RPG dialogue.',
-    color: 'bg-violet-50 text-violet-600 border-violet-100',
-  },
-  {
-    icon: Globe,
-    title: 'Your Language, Your App',
-    description:
-      'Full interface support for English, Arabic, Russian, and Persian. All translations are shown in your native language.',
-    color: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-  },
-];
-
-const steps = [
-  { number: '01', title: 'Pick your language', description: 'Choose your native language for translations and UI.' },
-  { number: '02', title: 'Read the Guidebook', description: 'Learn vocab and key phrases before each new unit.' },
-  { number: '03', title: 'Complete lessons', description: 'Drag, match, fill-in, and role-play your way to fluency.' },
-  { number: '04', title: 'Live in Turkey confidently', description: 'Handle real-life situations — market, hospital, bank.' },
-];
-
-const testimonials = [
-  { name: 'Rania K.', flag: '🇸🇦', text: 'I used to panic at the market. After 2 weeks, I can negotiate prices in Turkish!', lang: 'Arabic speaker' },
-  { name: 'Dmitri V.', flag: '🇷🇺', text: 'The RPG lessons are genius. I actually practiced ordering food before going to a restaurant.', lang: 'Russian speaker' },
-  { name: 'Parisa M.', flag: '🇮🇷', text: 'The guidebooks explain grammar so simply. I understood Turkish case suffixes in 10 minutes!', lang: 'Persian speaker' },
-];
 
 export default function LandingPage() {
   const { locale } = useParams<{ locale: string }>();
   const l = locale || 'en';
+  const t = useTranslations('landing');
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newLocale = e.target.value;
+    // Redirect to the same path but with the new locale
+    router.push(`/${newLocale}`);
+  };
+
+  const features = [
+    {
+      icon: BookOpen,
+      title: t('f1_title'),
+      description: t('f1_desc'),
+      color: 'bg-red-50 text-red-600 border-red-100',
+    },
+    {
+      icon: Flame,
+      title: t('f2_title'),
+      description: t('f2_desc'),
+      color: 'bg-orange-50 text-orange-600 border-orange-100',
+    },
+    {
+      icon: Gamepad2,
+      title: t('f3_title'),
+      description: t('f3_desc'),
+      color: 'bg-violet-50 text-violet-600 border-violet-100',
+    },
+    {
+      icon: Globe,
+      title: t('f4_title'),
+      description: t('f4_desc'),
+      color: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    },
+  ];
+
+  const steps = [
+    { number: t('s1_num'), title: t('s1_title'), description: t('s1_desc') },
+    { number: t('s2_num'), title: t('s2_title'), description: t('s2_desc') },
+    { number: t('s3_num'), title: t('s3_title'), description: t('s3_desc') },
+    { number: t('s4_num'), title: t('s4_title'), description: t('s4_desc') },
+  ];
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
@@ -75,18 +70,31 @@ export default function LandingPage() {
               Rota<span className="text-red-600">lingo</span>
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href={`/${l}/login`}
-              className="px-4 py-2 text-sm font-semibold text-slate-700 hover:text-red-600 transition-colors"
+          <div className="flex items-center gap-4">
+            <select
+              value={l}
+              onChange={handleLanguageChange}
+              className="bg-transparent text-sm font-semibold text-slate-700 outline-none cursor-pointer hover:text-red-600 transition-colors"
             >
-              Log In
-            </Link>
+              <option value="en">English</option>
+              <option value="ar">العربية</option>
+              <option value="ru">Русский</option>
+              <option value="fa">فارسی</option>
+            </select>
+
+            <div className="hidden sm:flex items-center gap-2">
+              <Link
+                href={`/${l}/login`}
+                className="px-4 py-2 text-sm font-semibold text-slate-700 hover:text-red-600 transition-colors"
+              >
+                {t('cta_preview')}
+              </Link>
+            </div>
             <Link
               href={`/${l}/register`}
               className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
             >
-              Get Started Free
+              {t('cta_create')}
             </Link>
           </div>
         </div>
@@ -99,20 +107,14 @@ export default function LandingPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-100 rounded-full text-red-700 text-sm font-semibold mb-8">
-            <MapPin size={14} />
-            Built for foreigners living in Turkey
-          </div>
-
           <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight leading-tight mb-6">
-            Break the language barrier.
+            {t('title1')}
             <br />
-            <span className="text-red-600">Live in Turkey</span> on your terms.
+            <span className="text-red-600">{t('title2')}</span>
           </h1>
 
-          <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Learn practical, survival Turkish through gamified lessons and interactive role-play — 
-            designed for Arabic, Russian, and Persian speakers navigating daily life in Turkey.
+          <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
+            {t('mission_statement')}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -120,30 +122,14 @@ export default function LandingPage() {
               href={`/${l}/register`}
               className="w-full sm:w-auto px-8 py-4 bg-red-600 hover:bg-red-500 text-white text-lg font-bold rounded-2xl shadow-xl shadow-red-600/20 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
             >
-              Start Learning Free <ChevronRight size={20} />
+              {t('cta_start')} <ChevronRight size={20} />
             </Link>
             <Link
               href={`/${l}/dashboard`}
               className="w-full sm:w-auto px-8 py-4 bg-slate-100 hover:bg-slate-200 text-slate-800 text-lg font-bold rounded-2xl transition-colors flex items-center justify-center gap-2"
             >
-              Preview the App
+              {t('cta_preview')}
             </Link>
-          </div>
-
-          {/* Social proof */}
-          <div className="flex items-center justify-center gap-6 mt-12 text-sm text-slate-500">
-            <div className="flex items-center gap-1.5">
-              <Users size={16} className="text-red-500" />
-              <span><strong className="text-slate-900">2,400+</strong> learners</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Star size={16} className="text-amber-400 fill-amber-400" />
-              <span><strong className="text-slate-900">4.9</strong> rating</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <CheckCircle size={16} className="text-emerald-500" />
-              <span><strong className="text-slate-900">Free</strong> to start</span>
-            </div>
           </div>
         </motion.div>
       </section>
@@ -153,10 +139,10 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto px-4">
           <div className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-extrabold mb-4">
-              Everything you need to survive — and <span className="text-red-600">thrive</span>
+              {t('features_title')}
             </h2>
             <p className="text-slate-500 text-lg max-w-xl mx-auto">
-              Practical, bite-sized lessons designed around real situations you face every day in Turkey.
+              {t('features_subtitle')}
             </p>
           </div>
 
@@ -184,8 +170,8 @@ export default function LandingPage() {
       {/* ── How it works ── */}
       <section className="py-20 max-w-5xl mx-auto px-4">
         <div className="text-center mb-14">
-          <h2 className="text-3xl sm:text-4xl font-extrabold mb-4">How it works</h2>
-          <p className="text-slate-500 text-lg">From zero to confident in just a few weeks.</p>
+          <h2 className="text-3xl sm:text-4xl font-extrabold mb-4">{t('how_it_works')}</h2>
+          <p className="text-slate-500 text-lg">{t('how_it_works_sub')}</p>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -210,10 +196,10 @@ export default function LandingPage() {
       <section className="bg-red-600 py-20 text-white">
         <div className="max-w-5xl mx-auto px-4 text-center">
           <h2 className="text-3xl sm:text-4xl font-extrabold mb-4">
-            180 lessons across 4 levels
+            {t('curriculum_title')}
           </h2>
           <p className="text-red-100 text-lg mb-10 max-w-xl mx-auto">
-            A1 → A1 İleri → A2 → A2 İleri. Real situations, not textbook sentences.
+            {t('curriculum_sub')}
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto">
@@ -236,54 +222,21 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Testimonials ── */}
-      <section className="py-20 max-w-5xl mx-auto px-4">
-        <div className="text-center mb-14">
-          <h2 className="text-3xl sm:text-4xl font-extrabold mb-4">Loved by expats across Turkey</h2>
-        </div>
-        <div className="grid sm:grid-cols-3 gap-6">
-          {testimonials.map((t, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="bg-white border border-slate-100 shadow-sm rounded-3xl p-6"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="text-3xl">{t.flag}</div>
-                <div>
-                  <div className="font-bold text-sm">{t.name}</div>
-                  <div className="text-slate-400 text-xs">{t.lang}</div>
-                </div>
-              </div>
-              <p className="text-slate-600 text-sm leading-relaxed italic">&ldquo;{t.text}&rdquo;</p>
-              <div className="flex gap-0.5 mt-3">
-                {[1,2,3,4,5].map(s => (
-                  <Star key={s} size={13} className="text-amber-400 fill-amber-400" />
-                ))}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
       {/* ── Final CTA ── */}
       <section className="bg-slate-900 text-white py-20">
         <div className="max-w-2xl mx-auto px-4 text-center">
           <div className="text-5xl mb-6">🇹🇷</div>
           <h2 className="text-3xl sm:text-4xl font-extrabold mb-4">
-            Start speaking Turkish today.
+            {t('cta_final_title')}
           </h2>
           <p className="text-slate-400 mb-8 text-lg">
-            Free forever. No credit card needed. Just pick your language and go.
+            {t('cta_final_sub')}
           </p>
           <Link
             href={`/${l}/register`}
             className="inline-flex items-center gap-2 px-8 py-4 bg-red-600 hover:bg-red-500 text-white text-lg font-bold rounded-2xl shadow-xl shadow-red-600/30 transition-all hover:scale-105 active:scale-95"
           >
-            Create Free Account <ChevronRight size={20} />
+            {t('cta_create')} <ChevronRight size={20} />
           </Link>
         </div>
       </section>
@@ -294,7 +247,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-2">
             <span className="text-xl">🇹🇷</span>
             <span className="font-bold text-slate-700">Rotalingo</span>
-            <span>— Learn Turkish, Live Turkey</span>
+            <span>— {t('footer_tagline')}</span>
           </div>
           <div className="flex gap-4">
             <Link href={`/${l}/login`} className="hover:text-slate-700 transition-colors">Log In</Link>
