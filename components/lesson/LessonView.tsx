@@ -42,6 +42,7 @@ import WordOrderCard from './WordOrderCard';
 import FillInBlankCard from './FillInBlankCard';
 import RPGDialogueCard from './RPGDialogueCard';
 import RPGTypingCard from './RPGTypingCard';
+import { createClient } from '@/lib/supabase/client';
 
 interface LessonViewProps {
   lesson: Lesson;
@@ -84,18 +85,40 @@ export default function LessonView({ lesson, locale }: LessonViewProps) {
     return shuffle(mapped);
   }, [exerciseIndex, lesson.exercises, locale]);
 
-  const advance = useCallback(() => {
+  const supabase = createClient();
+
+  const advance = useCallback(async () => {
     setCompletedCount((c) => c + 1);
     if (exerciseIndex + 1 >= totalExercises) {
-      gainCoins(getLessonCoins(lesson));
+      const xpEarned = getLessonXP(lesson);
+      const coinsEarned = getLessonCoins(lesson);
+      
+      gainCoins(coinsEarned);
+      useUserStore.getState().gainXP(xpEarned);
       completeLesson(lesson.id);
       setIsComplete(true);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('users_profile')
+          .select('weekly_xp, total_xp')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile) {
+          await supabase.from('users_profile').update({
+            weekly_xp: (profile.weekly_xp || 0) + xpEarned,
+            total_xp: (profile.total_xp || 0) + xpEarned
+          }).eq('id', user.id);
+        }
+      }
     } else {
       setExerciseIndex((i) => i + 1);
       setSelected(null);
       setAnswerState(null);
     }
-  }, [exerciseIndex, totalExercises, lesson, gainCoins, completeLesson]);
+  }, [exerciseIndex, totalExercises, lesson, gainCoins, completeLesson, supabase]);
 
   const handleMCSelect = useCallback((id: string, isCorrect: boolean) => {
     setSelected(id);

@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import TopBar from '@/components/ui/TopBar';
 import BottomNav from '@/components/ui/BottomNav';
+import { GlobalListeners } from '@/components/auth/GlobalListeners';
 
 interface LocaleLayoutClientProps {
   locale: string;
@@ -34,6 +35,7 @@ export default function LocaleLayoutClient({
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
+      <GlobalListeners />
       <div
         className="min-h-screen flex flex-col max-w-md mx-auto relative bg-white text-slate-900"
         dir={isRTL ? 'rtl' : 'ltr'}
