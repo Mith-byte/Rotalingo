@@ -97,5 +97,9 @@
     "s4_num": "04",
     "s4_title": "Live confidently",
     "s4_desc": "Handle real-life situations — market, hospital, bank."
+  },
+  "leaderboard": {
+    "weekly_rank": "Weekly Rank",
+    "top_50": "Top 50 Learners this week"
   }
 }

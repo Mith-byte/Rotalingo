@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Medal } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { useTranslations } from 'next-intl';
 
 interface LeaderboardEntry {
   id: string;
@@ -11,6 +12,7 @@ interface LeaderboardEntry {
 }
 
 export default function LeaderboardPage() {
+  const t = useTranslations('leaderboard');
   const [users, setUsers] = useState<LeaderboardEntry[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,8 +60,8 @@ export default function LeaderboardPage() {
         className="flex flex-col items-center gap-2 py-8"
       >
         <Trophy size={56} className="text-amber-500 mb-2" />
-        <h2 className="text-3xl font-black text-slate-900 tracking-tight">Weekly Rank</h2>
-        <p className="text-sm text-slate-500 font-medium">Top 50 Learners this week</p>
+        <h2 className="text-3xl font-black text-slate-900 tracking-tight">{t('weekly_rank')}</h2>
+        <p className="text-sm text-slate-500 font-medium">{t('top_50')}</p>
       </motion.div>
 
       <div className="flex flex-col gap-3 pb-10">

@@ -112,6 +112,24 @@ export default function LessonView({ lesson, locale }: LessonViewProps) {
             total_xp: (profile.total_xp || 0) + xpEarned
           }).eq('id', user.id);
         }
+
+        const { data: progress } = await supabase
+          .from('user_progress')
+          .select('coins, completed_lessons')
+          .eq('user_id', user.id)
+          .single();
+
+        if (progress) {
+          const currentLessons = Array.isArray(progress.completed_lessons) 
+            ? progress.completed_lessons 
+            : [];
+          const updatedLessons = Array.from(new Set([...currentLessons, lesson.id]));
+          
+          await supabase.from('user_progress').update({
+            coins: (progress.coins || 0) + coinsEarned,
+            completed_lessons: updatedLessons
+          }).eq('user_id', user.id);
+        }
       }
     } else {
       setExerciseIndex((i) => i + 1);
