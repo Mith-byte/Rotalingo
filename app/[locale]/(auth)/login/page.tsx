@@ -7,6 +7,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Mail, Lock, Eye, EyeOff, ChevronRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { useUserStore } from '@/lib/store/userStore';
 
 export default function LoginPage() {
   const t = useTranslations('auth');
@@ -32,6 +33,8 @@ export default function LoginPage() {
       setLoading(false);
       return;
     }
+
+    useUserStore.getState().reset();
 
     // Try to redirect to user's saved native language
     const { data: { user } } = await supabase.auth.getUser();

@@ -21,6 +21,7 @@ interface UserState {
     lastPlayedAt: string | null;
     completedLessons: string[];
   }) => void;
+  reset: () => void;
 }
 
 export const useUserStore = create<UserState>()(
@@ -60,6 +61,15 @@ export const useUserStore = create<UserState>()(
           streakCount: data.streakCount,
           lastPlayedAt: data.lastPlayedAt,
           completedLessons: data.completedLessons,
+        }),
+
+      reset: () =>
+        set({
+          hearts: 5,
+          coins: 0,
+          streakCount: 0,
+          lastPlayedAt: null,
+          completedLessons: [],
         }),
     }),
     { name: 'rotalingo-user-storage' }

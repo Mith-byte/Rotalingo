@@ -7,6 +7,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Mail, Lock, User, Globe, ChevronRight, CheckCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { useUserStore } from '@/lib/store/userStore';
 
 const NATIVE_LANGUAGES = [
   { code: 'en', label: 'English 🇬🇧', native: 'English' },
@@ -64,6 +65,8 @@ export default function SignupPage() {
         native_language: nativeLang,
       });
     }
+
+    useUserStore.getState().reset();
 
     setDone(true);
     setLoading(false);

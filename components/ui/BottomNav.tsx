@@ -9,9 +9,9 @@ import { clsx } from 'clsx';
 
 const navItems = [
   { id: 'home', icon: Home, href: '/dashboard' },
-  { id: 'leaderboard', icon: Trophy, href: '/leaderboard' },
-  { id: 'profile', icon: User, href: '/profile' },
-  { id: 'store', icon: ShoppingBag, href: '/store' },
+  { id: 'leaderboard', icon: Trophy, href: '/dashboard/leaderboard' },
+  { id: 'profile', icon: User, href: '/dashboard/profile' },
+  { id: 'store', icon: ShoppingBag, href: '/dashboard/store' },
 ] as const;
 
 interface BottomNavProps {
