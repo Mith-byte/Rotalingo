@@ -5,6 +5,7 @@ import { User, Heart, Gem, Flame, LogOut } from 'lucide-react';
 import { useUserStore } from '@/lib/store/userStore';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 interface UserData {
   displayName: string;
@@ -12,6 +13,7 @@ interface UserData {
 }
 
 export default function ProfilePage() {
+  const t = useTranslations('profile');
   const { hearts, coins, streakCount } = useUserStore();
   const [user, setUser] = useState<UserData | null>(null);
   const router = useRouter();
@@ -59,12 +61,12 @@ export default function ProfilePage() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-10">
         {[
-          { icon: <Flame size={24} className="text-orange-400" />, label: 'Streak', value: streakCount },
-          { icon: <Heart size={24} className="text-red-400" fill="#f87171" />, label: 'Hearts', value: hearts },
-          { icon: <Gem size={24} className="text-cyan-400" fill="#22d3ee" />, label: 'Coins', value: coins },
+          { id: 'streak', icon: <Flame size={24} className="text-orange-400" />, label: t('streak'), value: streakCount },
+          { id: 'hearts', icon: <Heart size={24} className="text-red-400" fill="#f87171" />, label: t('hearts'), value: hearts },
+          { id: 'coins', icon: <Gem size={24} className="text-cyan-400" fill="#22d3ee" />, label: t('coins'), value: coins },
         ].map((stat) => (
           <motion.div
-            key={stat.label}
+            key={stat.id}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
@@ -83,7 +85,7 @@ export default function ProfilePage() {
         className="w-full flex items-center justify-center gap-2 py-4 bg-slate-100 hover:bg-red-50 text-slate-700 hover:text-red-600 font-bold rounded-2xl transition-colors"
       >
         <LogOut size={20} />
-        <span>Log Out</span>
+        <span>{t('logout')}</span>
       </motion.button>
     </div>
   );

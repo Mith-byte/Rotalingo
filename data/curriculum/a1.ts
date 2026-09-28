@@ -7,7 +7,7 @@ export const a1Level: Level = {
   "units": [
     {
       "id": "a1_selamlasma",
-      "title": "Selamlaşma",
+      "title": { "tr": "Selamlaşma", "en": "Greetings & Introductions", "ar": "التحيات والتعارف", "fa": "احوال‌پرسی و معرفی", "ru": "Приветствия и знакомства" },
       "description": "Selamlaşma (A1)",
       "emoji": "👋",
       "color": "from-pink-400 to-rose-500",
@@ -1212,7 +1212,7 @@ export const a1Level: Level = {
     },
     {
       "id": "a1_pazar",
-      "title": "Pazar",
+      "title": { "tr": "Pazar", "en": "Market & Food", "ar": "السوق والطعام", "fa": "بازار و غذا", "ru": "Рынок и еда" },
       "description": "Pazar (A1)",
       "emoji": "🛒",
       "color": "from-emerald-400 to-teal-500",
@@ -2405,7 +2405,7 @@ export const a1Level: Level = {
     },
     {
       "id": "a1_ev_aile",
-      "title": "Ev & Aile",
+      "title": { "tr": "Ev & Aile", "en": "Home & Family", "ar": "المنزل والعائلة", "fa": "خانه و خانواده", "ru": "Дом и семья" },
       "description": "Ev & Aile (A1)",
       "emoji": "🏠",
       "color": "from-amber-400 to-orange-500",
@@ -3614,7 +3614,7 @@ export const a1Level: Level = {
     },
     {
       "id": "a1_kafe",
-      "title": "Kafe & Restoran",
+      "title": { "tr": "Kafe & Restoran", "en": "Café & Restaurant", "ar": "مقهى ومطعم", "fa": "کافه و رستوران", "ru": "Кафе и ресторан" },
       "description": "Kafe & Restoran (A1)",
       "emoji": "☕",
       "color": "from-violet-400 to-purple-600",
@@ -4821,7 +4821,7 @@ export const a1Level: Level = {
     },
     {
       "id": "a1_sayilar",
-      "title": "Sayılar & Zaman",
+      "title": { "tr": "Sayılar & Zaman", "en": "Numbers & Time", "ar": "الأرقام والوقت", "fa": "اعداد و زمان", "ru": "Числа и время" },
       "description": "Sayılar & Zaman (A1)",
       "emoji": "🔢",
       "color": "from-sky-400 to-blue-600",

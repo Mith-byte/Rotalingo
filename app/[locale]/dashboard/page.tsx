@@ -72,7 +72,7 @@ export default function HomePage() {
               <div className={`flex items-center gap-2 ${!levelUnlocked ? 'opacity-40' : ''}`}>
                 {!levelUnlocked && <span className="text-sm">🔒</span>}
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
-                  {t('level')} · {level.code}
+                  {t('level')} · {level.id.replace('_ileri', '+').toUpperCase()}
                 </span>
               </div>
               <div className="flex-1 h-px bg-slate-200" />
@@ -129,7 +129,7 @@ export default function HomePage() {
                       name={localizedName}
                       nameTr={turkishName}
                       emoji={unit.emoji}
-                      level={level.code ?? level.id}
+                      level={level.id.replace('_ileri', '+').toUpperCase()}
                       color={unit.color ?? unit.themeColor ?? 'from-slate-400 to-slate-500'}
                       lessonCount={unit.lessons.length}
                       completedCount={completedCount}

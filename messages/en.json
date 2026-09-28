@@ -101,5 +101,12 @@
   "leaderboard": {
     "weekly_rank": "Weekly Rank",
     "top_50": "Top 50 Learners this week"
+  },
+  "profile": {
+    "title": "Your Profile",
+    "streak": "Streak",
+    "hearts": "Hearts",
+    "coins": "Coins",
+    "logout": "Log Out"
   }
 }
