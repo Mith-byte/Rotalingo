@@ -242,17 +242,26 @@ export default function LandingPage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-slate-100 py-8">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-400">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🇹🇷</span>
-            <span className="font-bold text-slate-700">Rotalingo</span>
-            <span>— {t('footer_tagline')}</span>
+      <footer className="border-t border-slate-100 py-10">
+        <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-slate-500">
+          <div className="flex flex-col items-center md:items-start gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🇹🇷</span>
+              <span className="font-bold text-slate-700 text-lg">Rotalingo</span>
+              <span className="hidden sm:inline">— {t('footer_tagline')}</span>
+            </div>
+            <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+              <img src="/rotaract-logo.png" alt="Rotaract Club of Dokuz Eylul" className="h-10 w-auto" />
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Project of</span>
+                <span className="font-bold text-slate-700">Rotaract Club of Dokuz Eylul</span>
+              </div>
+            </div>
           </div>
-          <div className="flex gap-4">
-            <Link href={`/${l}/login`} className="hover:text-slate-700 transition-colors">Log In</Link>
-            <Link href={`/${l}/register`} className="hover:text-slate-700 transition-colors">Sign Up</Link>
-            <Link href={`/${l}/dashboard`} className="hover:text-slate-700 transition-colors">App</Link>
+          <div className="flex gap-6 font-medium">
+            <Link href={`/${l}/login`} className="hover:text-slate-900 transition-colors">Log In</Link>
+            <Link href={`/${l}/register`} className="hover:text-slate-900 transition-colors">Sign Up</Link>
+            <Link href={`/${l}/dashboard`} className="hover:text-slate-900 transition-colors">App</Link>
           </div>
         </div>
       </footer>
